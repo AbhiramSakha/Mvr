@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <!-- Navbar -->
+    <div class="navbar">
+        <h2>Movie Dashboard</h2>
+        <a href="logout.html" class="logout-btn">Logout</a>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="search-container">
+        <input type="text" id="search-input" placeholder="Search for a movie...">
+        <button id="search-btn" class="search-btn">Search</button>
+    </div>
+
+    <!-- Movie Advertisement Section -->
+    <div class="advertisement">
+        <h3>🔥 Now Streaming</h3>
+        <div class="movie-slider">
+            <div class="movie-track" id="movie-track"></div>
+        </div>
+    </div>
+
+    <!-- Movie Grid -->
+    <h2>Trending Movies</h2>
+    <div class="movie-container" id="movie-container"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>

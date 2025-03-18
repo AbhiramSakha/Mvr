@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Results</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h2>Search Results</h2>
+        <div class="movie-container">
+            {% for movie in recommended_movies %}
+            <div class="movie-card">
+                <img src="{{ movie.poster_url }}" alt="{{ movie.title }}">
+                <h3>{{ movie.title }}</h3>
+                <p>Genre: {{ movie.genre }}</p>
+                <p>Rating: {{ movie.rating }}</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</body>
+</html>

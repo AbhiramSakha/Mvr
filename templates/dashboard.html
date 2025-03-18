@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="navbar">
+        <h2>Welcome, {{ session['username'] }}</h2>
+        <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+    </div>
+
+    <div class="container">
+        <!-- Search Section -->
+        <div class="search-container">
+            <input type="text" id="movieSearch" placeholder="Search for a movie..." onkeypress="handleKeyPress(event)">
+            <select id="languageSelect">
+                <option value="en-US">English</option>
+                <option value="hi-IN">Hindi</option>
+                <option value="fr-FR">French</option>
+                <option value="es-ES">Spanish</option>
+                <option value="de-DE">German</option>
+                <option value="zh-CN">Chinese</option>
+                <option value="ja-JP">Japanese</option>
+            </select>
+            <button onclick="searchMovie()">Search</button>
+        </div>
+
+        <!-- Search Results -->
+        <div class="search-results" id="movie-results"></div>
+
+        <!-- Advertisement Row -->
+        <div class="advertisement-container">
+            <h3>Trending Movies</h3>
+            <div class="advertisement">
+                <div id="movie-track" class="movie-track"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_KEY = "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIzMTRkM2YwYzVhM2U3NTk0MTE0YjE0OGFhOTljZmI2NyIsIm5iZiI6MTc0MTY3NzAzMC43MDcsInN1YiI6IjY3Y2ZlMWU2NDJjMGNjYzNjYTFkZDZhNyIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.M_1Oxd8GK14Iu9hIthAC6KfMuTJFgWY7dP7UiEduEDs";
+        const TMDB_URL = "https://api.themoviedb.org/3";
+
+        async function fetchTrendingMovies() {
+            try {
+                const response = await fetch(`${TMDB_URL}/trending/movie/week?language=en-US`, {
+                    headers: {
+                        Authorization: `Bearer ${API_KEY}`,
+                        "Content-Type": "application/json"
+                    }
+                });
+
+                const data = await response.json();
+                const track = document.getElementById("movie-track");
+
+                data.results.forEach(movie => {
+                    const movieElement = `
+                        <div class="movie">
+                            <img src="https://image.tmdb.org/t/p/w200${movie.poster_path}" alt="${movie.title}">
+                            <p><b>${movie.title}</b></p>
+                        </div>
+                    `;
+                    track.innerHTML += movieElement;
+                });
+            } catch (error) {
+                console.error("Error fetching trending movies:", error);
+            }
+        }
+
+        async function searchMovie() {
+            const query = document.getElementById("movieSearch").value.trim();
+            const language = document.getElementById("languageSelect").value;
+
+            if (!query) {
+                alert("Please enter a movie name!");
+                return;
+            }
+
+            try {
+                const response = await fetch(`${TMDB_URL}/search/movie?query=${query}&language=${language}`, {
+                    headers: {
+                        Authorization: `Bearer ${API_KEY}`,
+                        "Content-Type": "application/json"
+                    }
+                });
+
+                const data = await response.json();
+                const resultsContainer = document.getElementById("movie-results");
+                resultsContainer.innerHTML = "";
+
+                if (data.results.length === 0) {
+                    resultsContainer.innerHTML = "<p>No results found.</p>";
+                    return;
+                }
+
+                data.results.forEach(movie => {
+                    const trailerUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(movie.title + " trailer")}`;
+                    const fullMovieUrl = `https://www.justwatch.com/search?q=${encodeURIComponent(movie.title)}`;
+
+                    const movieDiv = document.createElement("div");
+                    movieDiv.classList.add("movie");
+                    movieDiv.innerHTML = `
+                        <img src="https://image.tmdb.org/t/p/w200${movie.poster_path}" alt="${movie.title}">
+                        <p><b>${movie.title}</b></p>
+                        <p>⭐ ${movie.vote_average} | ${movie.release_date}</p>
+                        <div class="movie-buttons">
+                            <a href="${trailerUrl}" target="_blank" class="watch-btn">Watch Trailer</a>
+                            <a href="${fullMovieUrl}" target="_blank" class="watch-btn">Watch Full Movie</a>
+                        </div>
+                    `;
+                    resultsContainer.appendChild(movieDiv);
+                });
+            } catch (error) {
+                console.error("Error fetching movie data:", error);
+            }
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === "Enter") {
+                searchMovie();
+            }
+        }
+
+        fetchTrendingMovies();
+    </script>
+</body>
+</html>
