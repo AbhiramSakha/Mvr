@@ -19,6 +19,15 @@
             <select id="languageSelect">
                 <option value="en-US">English</option>
                 <option value="hi-IN">Hindi</option>
+                <option value="te-IN">Telugu</option>
+                <option value="ta-IN">Tamil</option>
+                <option value="kn-IN">Kannada</option>
+                <option value="ml-IN">Malayalam</option>
+                <option value="bn-IN">Bengali</option>
+                <option value="mr-IN">Marathi</option>
+                <option value="pa-IN">Punjabi</option>
+                <option value="gu-IN">Gujarati</option>
+                <option value="or-IN">Odia</option>
                 <option value="fr-FR">French</option>
                 <option value="es-ES">Spanish</option>
                 <option value="de-DE">German</option>
@@ -40,8 +49,13 @@
         </div>
     </div>
 
+    <!-- Contact Us Footer -->
+    <footer class="contact-us">
+        <p>Contact us at: <a href="mailto:abhiramsakhaa@gmail.com">abhiramsakhaa@gmail..com</a></p>
+    </footer>
+
     <script>
-        const API_KEY = "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIzMTRkM2YwYzVhM2U3NTk0MTE0YjE0OGFhOTljZmI2NyIsIm5iZiI6MTc0MTY3NzAzMC43MDcsInN1YiI6IjY3Y2ZlMWU2NDJjMGNjYzNjYTFkZDZhNyIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.M_1Oxd8GK14Iu9hIthAC6KfMuTJFgWY7dP7UiEduEDs";
+        const API_KEY = "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI3MTQ4NzRiMGY5YjAxM2ZiMmY2YTNmMjE2MmZiMzczMCIsIm5iZiI6MTc0MTY3NzAzMC43MDcsInN1YiI6IjY3Y2ZlMWU2NDJjMGNjYzNjYTFkZDZhNyIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.ZQC4cE7jPNUr6BWvVC5Wn0G06EHGVhiut9eRfflCAio";
         const TMDB_URL = "https://api.themoviedb.org/3";
 
         async function fetchTrendingMovies() {
@@ -98,7 +112,7 @@
 
                 data.results.forEach(movie => {
                     const trailerUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(movie.title + " trailer")}`;
-                    const fullMovieUrl = `https://www.justwatch.com/search?q=${encodeURIComponent(movie.title)}`;
+                    const fullMovieUrl = `https://www.google.com/search?q=watch+${encodeURIComponent(movie.title)}+full+movie+online`;
 
                     const movieDiv = document.createElement("div");
                     movieDiv.classList.add("movie");
