@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, session, j
 from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3
 import requests
+import os
 
 app = Flask(__name__)
 app.secret_key = "your_secret_key"
@@ -116,5 +117,7 @@ def recommend():
 
     return jsonify({"recommended_movies": recommended_movies})
 
-if __name__ == "__main__":
-    app.run(debug=True)
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000)) 
+    app.run(host='0.0.0.0', port=port)
+
