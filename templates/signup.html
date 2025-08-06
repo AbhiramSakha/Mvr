@@ -1,146 +1,119 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Login</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Signup</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
-    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
     <style>
-        * {
-            box-sizing: border-box;
-            padding: 0;
-            margin: 0;
+        @keyframes gradientAnimation {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
         }
 
         body {
-            height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            height: 100vh;
+            background: linear-gradient(135deg, #8EC5FC,rgb(15, 79, 43), #FF9A8B,rgb(218, 22, 61));
+            background-size: 300% 300%;
+            animation: gradientAnimation 6s ease infinite;
             font-family: 'Poppins', sans-serif;
+            margin: 0;
         }
 
-        .login-container {
-            backdrop-filter: blur(16px) saturate(180%);
-            -webkit-backdrop-filter: blur(16px) saturate(180%);
-            background-color: rgba(255, 255, 255, 0.15);
-            border-radius: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            padding: 40px;
-            width: 350px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-            color: #fff;
+        .signup-container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
             text-align: center;
-            animation: fadeIn 1s ease-in-out;
+            width: 350px;
+            animation: fadeIn 0.8s ease-in-out;
         }
 
         @keyframes fadeIn {
             from {
                 opacity: 0;
-                transform: scale(0.9);
+                transform: translateY(-10px);
             }
             to {
                 opacity: 1;
-                transform: scale(1);
+                transform: translateY(0);
             }
         }
 
-        .login-container h2 {
-            font-size: 28px;
+        .signup-container h2 {
             margin-bottom: 20px;
+            color: #333;
+            font-size: 24px;
             font-weight: 600;
         }
 
-        .input-field {
-            position: relative;
-            margin: 20px 0;
-        }
-
-        .input-field input {
+        .signup-container input {
             width: 100%;
-            padding: 14px 40px 14px 45px;
-            border: none;
-            border-radius: 12px;
-            background: rgba(255, 255, 255, 0.2);
-            color: #fff;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 8px;
             font-size: 16px;
-            outline: none;
             transition: 0.3s;
         }
 
-        .input-field input::placeholder {
-            color: rgba(255, 255, 255, 0.7);
+        .signup-container input:focus {
+            border-color: #667eea;
+            outline: none;
+            box-shadow: 0 0 6px rgba(102, 126, 234, 0.5);
         }
 
-        .input-field i {
-            position: absolute;
-            top: 50%;
-            left: 15px;
-            transform: translateY(-50%);
-            color: rgba(255, 255, 255, 0.8);
-        }
-
-        .input-field input:focus {
-            background: rgba(255, 255, 255, 0.3);
-            box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
-        }
-
-        .login-container button {
+        .signup-container button {
             width: 100%;
             padding: 12px;
-            background: linear-gradient(135deg, #43e97b, #38f9d7);
-            color: #000;
+            background: #667eea;
+            color: white;
             border: none;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: 600;
+            border-radius: 8px;
             cursor: pointer;
-            transition: 0.3s ease;
+            font-size: 16px;
+            transition: 0.3s;
         }
 
-        .login-container button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+        .signup-container button:hover {
+            background: #5640b1;
+            transform: scale(1.05);
         }
 
-        .login-container p {
-            margin-top: 20px;
+        .signup-container p {
+            margin-top: 10px;
             font-size: 14px;
-            color: #eee;
+            color: #555;
         }
 
-        .login-container a {
-            color: #43e97b;
+        .signup-container a {
+            color: #667eea;
             text-decoration: none;
-            font-weight: 600;
+            font-weight: bold;
+            transition: 0.3s;
         }
 
-        .login-container a:hover {
+        .signup-container a:hover {
             text-decoration: underline;
+            color: #5640b1;
         }
     </style>
 </head>
 <body>
-    <div class="login-container">
-        <h2>Welcome Back 👋</h2>
+    <div class="signup-container">
+        <h2>Signup</h2>
         <form method="POST">
-            <div class="input-field">
-                <i class="fas fa-envelope"></i>
-                <input type="email" name="email" placeholder="Enter your email" required />
-            </div>
-            <div class="input-field">
-                <i class="fas fa-lock"></i>
-                <input type="password" name="password" placeholder="Enter your password" required />
-            </div>
-            <button type="submit">Login</button>
+            <input type="text" name="username" placeholder="Enter your username" required />
+            <input type="email" name="email" placeholder="Enter your email" required />
+            <input type="password" name="password" placeholder="Enter your password" required />
+            <button type="submit">Sign Up</button>
         </form>
-        <p>Don't have an account? <a href="{{ url_for('signup') }}">Sign up</a></p>
+        <p>Already have an account? <a href="{{ url_for('login') }}">Login</a></p>
     </div>
 </body>
 </html>
-  
