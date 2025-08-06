@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Verify OTP</title>
+  <style>
+    /* Same styles reused from login for consistent design */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      height: 100vh;
+      width: 100%;
+      background: url("{{ url_for('static', filename='images/logi.jpg') }}") center center / cover no-repeat fixed;
+      position: relative;
+      font-family: 'Poppins', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    body::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 0;
+    }
+
+    .login-container {
+      position: relative;
+      z-index: 1;
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(15px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 20px;
+      padding: 40px;
+      width: 350px;
+      text-align: center;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+      animation: slideIn 1s ease forwards;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .login-container h2 {
+      color: #fff;
+      margin-bottom: 20px;
+      font-size: 28px;
+    }
+
+    .login-container form input {
+      width: 100%;
+      padding: 12px 15px;
+      margin: 10px 0;
+      border: none;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.2);
+      color: #fff;
+      font-size: 14px;
+      transition: background 0.3s ease;
+    }
+
+    .login-container form input::placeholder {
+      color: rgba(255,255,255,0.8);
+    }
+
+    .login-container form input:focus {
+      outline: none;
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    .login-container form button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 15px;
+      background: linear-gradient(90deg, #00DBDE, #FC00FF);
+      border: none;
+      border-radius: 10px;
+      color: #fff;
+      font-weight: bold;
+      cursor: pointer;
+      transition: transform 0.3s ease;
+    }
+
+    .login-container form button:hover {
+      transform: scale(1.05);
+    }
+
+    .error {
+      color: #ff6961;
+      margin-top: 10px;
+    }
+
+    .success {
+      color: #00ff99;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <h2>Enter OTP 🔐</h2>
+    <form method="post">
+      <input type="text" placeholder="Enter the OTP sent to your email" name="otp" required />
+      <button type="submit">Verify OTP</button>
+    </form>
+    {% if error %}
+    <p class="error">{{ error }}</p>
+    {% endif %}
+  </div>
+</body>
+</html>
