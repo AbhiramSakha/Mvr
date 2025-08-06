@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Login</title>
   <style>
-    /* Styling same as your original + OTP form toggling */
     * {
       margin: 0;
       padding: 0;
@@ -80,7 +79,7 @@
     .login-container form button {
       width: 100%;
       padding: 12px;
-      margin-top: 15px;
+      margin-top: 10px;
       background: linear-gradient(90deg, #00DBDE, #FC00FF);
       border: none;
       border-radius: 10px;
@@ -121,7 +120,7 @@
       margin-top: 10px;
     }
 
-    #otp-form {
+    #otp-field {
       display: none;
     }
   </style>
@@ -129,18 +128,18 @@
 <body>
   <div class="login-container">
     <h2>Welcome Back 👋</h2>
+    <form id="loginForm" method="POST" action="/verify_otp">
+      <input type="email" name="email" id="email" placeholder="Enter your email" required />
+      <input type="password" name="password" id="password" placeholder="Enter your password" required />
 
-    <!-- Login Form -->
-    <form id="login-form" action="/login" method="POST">
-      <input type="email" name="email" placeholder="Enter your email" required />
-      <input type="password" name="password" placeholder="Enter your password" required />
-      <button type="submit">Login</button>
-    </form>
+      <!-- Button to trigger OTP send -->
+      <button type="button" onclick="sendOTP()">Verify OTP</button>
 
-    <!-- OTP Form -->
-    <form id="otp-form" action="/verify_otp" method="POST">
-      <input type="text" name="otp" placeholder="Enter OTP" required />
-      <button type="submit">Verify OTP</button>
+      <!-- OTP Field -->
+      <div id="otp-field">
+        <input type="text" name="otp" placeholder="Enter OTP" required />
+        <button type="submit">Login</button>
+      </div>
     </form>
 
     {% if error %}
@@ -151,11 +150,37 @@
   </div>
 
   <script>
-    // Show OTP form if OTP is in session
-    {% if session.get("otp") %}
-      document.getElementById("login-form").style.display = "none";
-      document.getElementById("otp-form").style.display = "block";
-    {% endif %}
+    function sendOTP() {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+
+      if (!email || !password) {
+        alert("Please enter both email and password before verifying OTP.");
+        return;
+      }
+
+      // Send AJAX POST to /login to trigger OTP send
+      fetch('/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email: email, password: password })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          // Show OTP input field
+          document.getElementById("otp-field").style.display = "block";
+        } else {
+          alert(data.message || "Login failed.");
+        }
+      })
+      .catch(err => {
+        alert("Error sending OTP.");
+        console.error(err);
+      });
+    }
   </script>
 </body>
 </html>
