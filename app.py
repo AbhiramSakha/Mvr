@@ -3,6 +3,9 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3
 import requests
 import os
+import random
+import smtplib
+from email.mime.text import MIMEText
 
 app = Flask(__name__)
 app.secret_key = "your_secret_key"
@@ -15,6 +18,29 @@ HEADERS = {
     "Authorization": f"Bearer {TMDB_READ_ACCESS_TOKEN}",
     "Content-Type": "application/json"
 }
+
+# Email OTP function
+def send_otp_email(email, otp):
+    sender_email = "your_email@gmail.com"
+    sender_password = "your_app_password"
+
+    subject = "Your OTP Verification Code"
+    body = f"Your OTP code is: {otp}"
+
+    msg = MIMEText(body)
+    msg["Subject"] = subject
+    msg["From"] = sender_email
+    msg["To"] = email
+
+    try:
+        with smtplib.SMTP("smtp.gmail.com", 587) as server:
+            server.starttls()
+            server.login(sender_email, sender_password)
+            server.send_message(msg)
+        return True
+    except Exception as e:
+        print(f"Error sending email: {e}")
+        return False
 
 # Database setup
 def init_db():
@@ -33,14 +59,12 @@ def init_db():
 
 init_db()
 
-# Home route
 @app.route("/")
 def home():
     if "user_id" not in session:
         return redirect(url_for("login"))
-    return render_template("dashboard.html")
+    return render_template("dashboard.html", username=session.get("username"))
 
-# Login route
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -54,15 +78,36 @@ def login():
         conn.close()
 
         if user and check_password_hash(user[3], password):
-            session["user_id"] = user[0]
-            session["username"] = user[1]
-            return redirect(url_for("home"))
+            # Generate OTP
+            otp = str(random.randint(100000, 999999))
+            session["pending_user"] = {"id": user[0], "username": user[1], "email": user[2]}
+            session["otp"] = otp
+
+            if send_otp_email(user[2], otp):
+                return redirect(url_for("verify_otp"))
+            else:
+                return render_template("login.html", error="Failed to send OTP. Try again.")
         else:
             return render_template("login.html", error="Invalid credentials")
 
     return render_template("login.html")
 
-# Signup route
+@app.route("/verify_otp", methods=["GET", "POST"])
+def verify_otp():
+    if request.method == "POST":
+        user_otp = request.form["otp"]
+        if "otp" in session and user_otp == session["otp"]:
+            user = session["pending_user"]
+            session["user_id"] = user["id"]
+            session["username"] = user["username"]
+            session.pop("otp", None)
+            session.pop("pending_user", None)
+            return redirect(url_for("home"))
+        else:
+            return render_template("verify_otp.html", error="Incorrect OTP")
+
+    return render_template("verify_otp.html")
+
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
     if request.method == "POST":
@@ -85,13 +130,11 @@ def signup():
 
     return render_template("signup.html")
 
-# Logout route
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect(url_for("login"))
 
-# Fetch movie recommendations from TMDb
 @app.route("/recommend", methods=["GET"])
 def recommend():
     movie_name = request.args.get("movie")
@@ -108,7 +151,7 @@ def recommend():
     results = data.get("results", [])
 
     recommended_movies = []
-    for movie in results[:5]:  
+    for movie in results[:5]:
         recommended_movies.append({
             "title": movie.get("title"),
             "overview": movie.get("overview"),
@@ -118,6 +161,5 @@ def recommend():
     return jsonify({"recommended_movies": recommended_movies})
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000)) 
+    port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
-
