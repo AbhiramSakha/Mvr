@@ -9,7 +9,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
   <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
   <style>
-    /* Reset & base */
     * {
       margin: 0;
       padding: 0;
@@ -19,34 +18,22 @@
     body {
       height: 100vh;
       width: 100%;
-      background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);
-      overflow: hidden;
+      background: url("{{ url_for('static', filename='images/move.jpg') }}") center center / cover no-repeat fixed;
+      position: relative;
       font-family: 'Poppins', sans-serif;
       display: flex;
       justify-content: center;
       align-items: center;
-      position: relative;
     }
 
-    /* Background animation */
     body::before {
-      content: '';
+      content: "";
       position: absolute;
-      width: 200%;
-      height: 200%;
-      background: repeating-radial-gradient(circle at center, #00ffe7 1px, transparent 2px);
-      background-size: 60px 60px;
-      animation: move 20s linear infinite;
+      inset: 0;
+      background: rgba(0,0,0,0.6); /* subtle dark overlay to improve readability */
       z-index: 0;
-      opacity: 0.05;
     }
 
-    @keyframes move {
-      0% { transform: translate(0, 0); }
-      100% { transform: translate(-30px, -30px); }
-    }
-
-    /* Signup container */
     .signup-container {
       position: relative;
       z-index: 1;
@@ -54,13 +41,13 @@
       padding: 40px;
       border-radius: 20px;
       background: rgba(255, 255, 255, 0.05);
-      box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(14px);
       border: 1px solid rgba(255, 255, 255, 0.18);
-      animation: fadeInUp 1s ease-out forwards;
+      animation: fadeInUp 1s ease forwards;
       opacity: 0;
       transform: translateY(30px);
+      color: #fff;
     }
 
     @keyframes fadeInUp {
@@ -71,10 +58,9 @@
     }
 
     .signup-container h2 {
-      color: #ffffff;
+      text-align: center;
       font-size: 26px;
       margin-bottom: 25px;
-      text-align: center;
       font-weight: 600;
     }
 
@@ -88,7 +74,7 @@
       top: 50%;
       left: 15px;
       transform: translateY(-50%);
-      color: #ffffffb3;
+      color: rgba(255, 255, 255, 0.8);
     }
 
     .input-group input {
@@ -100,15 +86,15 @@
       font-size: 15px;
       color: #fff;
       background: rgba(255, 255, 255, 0.1);
-      transition: 0.4s;
+      transition: 0.3s;
     }
 
     .input-group input::placeholder {
-      color: #ccc;
+      color: rgba(255,255,255,0.7);
     }
 
     .input-group input:focus {
-      background: rgba(255, 255, 255, 0.2);
+      background: rgba(255,255,255,0.2);
       box-shadow: 0 0 10px #00ffe7, 0 0 20px #00ffe7;
     }
 
@@ -134,7 +120,7 @@
       margin-top: 20px;
       text-align: center;
       font-size: 14px;
-      color: #ccc;
+      color: #eee;
     }
 
     .signup-container a {
