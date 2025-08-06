@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Login</title>
   <style>
-    /* Same CSS as before with improved styling */
+    /* Styling same as your original + OTP form toggling */
     * {
       margin: 0;
       padding: 0;
@@ -120,20 +120,42 @@
       color: #00ff99;
       margin-top: 10px;
     }
+
+    #otp-form {
+      display: none;
+    }
   </style>
 </head>
 <body>
   <div class="login-container">
     <h2>Welcome Back 👋</h2>
-    <form action="/login" method="post">
-      <input type="email" placeholder="Enter your email" name="email" required />
-      <input type="password" placeholder="Enter your password" name="password" required />
+
+    <!-- Login Form -->
+    <form id="login-form" action="/login" method="POST">
+      <input type="email" name="email" placeholder="Enter your email" required />
+      <input type="password" name="password" placeholder="Enter your password" required />
       <button type="submit">Login</button>
     </form>
+
+    <!-- OTP Form -->
+    <form id="otp-form" action="/verify_otp" method="POST">
+      <input type="text" name="otp" placeholder="Enter OTP" required />
+      <button type="submit">Verify OTP</button>
+    </form>
+
     {% if error %}
     <p class="error">{{ error }}</p>
     {% endif %}
+
     <p>Don’t have an account? <a href="/signup">Sign Up</a></p>
   </div>
+
+  <script>
+    // Show OTP form if OTP is in session
+    {% if session.get("otp") %}
+      document.getElementById("login-form").style.display = "none";
+      document.getElementById("otp-form").style.display = "block";
+    {% endif %}
+  </script>
 </body>
 </html>
