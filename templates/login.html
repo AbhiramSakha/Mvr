@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Login</title>
+  <title>{% if otp_required %}Verify OTP{% else %}Login{% endif %}</title>
   <style>
     * {
       margin: 0;
@@ -26,11 +26,11 @@
       content: "";
       position: absolute;
       inset: 0;
-      background: rgba(0, 0, 0, 0.5);  /* subtle dark overlay */
+      background: rgba(0, 0, 0, 0.5);
       z-index: 0;
     }
 
-    .login-container {
+    .container {
       position: relative;
       z-index: 1;
       background: rgba(255, 255, 255, 0.1);
@@ -49,13 +49,13 @@
       to { opacity: 1; transform: translateY(0); }
     }
 
-    .login-container h2 {
+    h2 {
       color: #fff;
       margin-bottom: 20px;
       font-size: 28px;
     }
 
-    .login-container form input {
+    form input {
       width: 100%;
       padding: 12px 15px;
       margin: 10px 0;
@@ -67,16 +67,16 @@
       transition: background 0.3s ease;
     }
 
-    .login-container form input::placeholder {
+    form input::placeholder {
       color: rgba(255,255,255,0.8);
     }
 
-    .login-container form input:focus {
+    form input:focus {
       outline: none;
       background: rgba(255, 255, 255, 0.3);
     }
 
-    .login-container form button {
+    form button {
       width: 100%;
       padding: 12px;
       margin-top: 15px;
@@ -89,37 +89,63 @@
       transition: transform 0.3s ease;
     }
 
-    .login-container form button:hover {
+    form button:hover {
       transform: scale(1.05);
     }
 
-    .login-container p {
-      color: #fff;
-      margin-top: 15px;
+    .message {
+      margin-top: 10px;
       font-size: 14px;
     }
 
-    .login-container p a {
+    .error {
+      color: #ff6961;
+    }
+
+    .success {
+      color: #00ff99;
+    }
+
+    .link-text {
+      color: #fff;
+      margin-top: 15px;
+    }
+
+    .link-text a {
       color: #00f7ff;
       text-decoration: none;
       font-weight: bold;
-      transition: color 0.3s ease;
     }
 
-    .login-container p a:hover {
+    .link-text a:hover {
       color: #ff5edf;
     }
   </style>
 </head>
 <body>
-  <div class="login-container">
-    <h2>Welcome Back 👋</h2>
-    <form action="/login" method="post">
-      <input type="email" placeholder="Enter your email" name="email" required />
-      <input type="password" placeholder="Enter your password" name="password" required />
-      <button type="submit">Login</button>
-    </form>
-    <p>Don’t have an account? <a href="/signup">Sign Up</a></p>
+  <div class="container">
+    {% if otp_required %}
+      <h2>Enter OTP 🔐</h2>
+      <form method="post" action="/verify_otp">
+        <input type="text" name="otp" placeholder="Enter the OTP sent to your email" required />
+        <button type="submit">Verify OTP</button>
+      </form>
+    {% else %}
+      <h2>Welcome Back 👋</h2>
+      <form method="post" action="/login">
+        <input type="email" name="email" placeholder="Enter your email" required />
+        <input type="password" name="password" placeholder="Enter your password" required />
+        <button type="submit">Login</button>
+      </form>
+      <p class="link-text">Don’t have an account? <a href="/signup">Sign Up</a></p>
+    {% endif %}
+
+    {% if error %}
+      <p class="message error">{{ error }}</p>
+    {% endif %}
+    {% if success %}
+      <p class="message success">{{ success }}</p>
+    {% endif %}
   </div>
 </body>
 </html>
