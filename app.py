@@ -21,8 +21,8 @@ HEADERS = {
 
 # Email OTP function
 def send_otp_email(email, otp):
-    sender_email = "your_email@gmail.com"
-    sender_password = "your_app_password"
+    sender_email = "abhiramsakhaa@gmail.com"
+    sender_password = "wwnf mntd rjhw egen"
 
     subject = "Your OTP Verification Code"
     body = f"Your OTP code is: {otp}"
