@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 app = Flask(__name__)
 
 # Secret key (use a secure environment variable or config in production)
-app.secret_key = "6121ab04b9d093cccf99d38ce589c5dd66f8796c1de955daa45615707f72b3b6"
+app.secret_key = "your secret key"
 
 # Flask-Mail config - Use your Gmail credentials (app password recommended)
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
