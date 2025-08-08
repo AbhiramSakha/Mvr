@@ -5,6 +5,141 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Movie Dashboard</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            background: #121212;
+            color: #fff;
+            min-height: 100vh;
+        }
+        .navbar {
+            background: #1f1f1f;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logout-btn {
+            background: #e50914;
+            padding: 8px 16px;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 4px;
+        }
+        .container {
+            padding: 2rem 1rem 3rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .search-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            justify-content: center;
+            margin-bottom: 2rem;
+        }
+        input[type="text"], select {
+            padding: 0.6rem 1rem;
+            border-radius: 5px;
+            border: none;
+            font-size: 1rem;
+            width: 250px;
+            max-width: 100%;
+            background: #232323;
+            color: #fff;
+        }
+        button {
+            background: #e50914;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            padding: 0.75rem 1.6rem;
+            font-size: 1rem;
+            cursor: pointer;
+            font-weight: 700;
+            transition: background .3s, transform .2s;
+        }
+        button:hover { background: #b0060f; transform: scale(1.05);}
+        .search-results {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px,1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+            justify-items: center;
+        }
+        .movie {
+            background: #202020;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 200px;
+            box-shadow: 0 0 12px rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 1rem 0.6rem 1.6rem;
+            transition: transform 0.3s cubic-bezier(.39,1.12,.56,.98);
+        }
+        .movie:hover, .movie:focus-within { transform: scale(1.05);}
+        .movie img {
+            width: 100%;
+            height: 300px;
+            object-fit: cover;
+            border-radius: 10px;
+            background: #222;
+        }
+        .movie-track {
+            display: flex;
+            gap: 1.2rem;
+            overflow-x: auto;
+            padding-bottom: 1.5rem;
+        }
+        .movie-track .movie {
+            min-width: 160px;
+            max-width: 170px;
+            padding: 0.7rem 0.3rem 1rem;
+            flex-shrink: 0;
+        }
+        .movie p { margin: 0.2rem 0 0 0; color: #eee;}
+        .movie-buttons {
+            margin-top: 10px;
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+        .watch-btn {
+            background: #03a9f4;
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            color: white;
+            text-decoration: none;
+            text-align: center;
+            flex: 1 1 48%;
+            transition: background 0.3s;
+        }
+        .watch-btn:hover { background: #0285c9;}
+        .advertisement-container { margin-top: 2.5rem;}
+        .advertisement-container h3 { text-align: left; font-size: 1.4rem; margin-bottom:1rem;}
+        /* Scrollbar styling for Webkit */
+        .movie-track::-webkit-scrollbar { height: 8px;}
+        .movie-track::-webkit-scrollbar-thumb { background: #e50914; border-radius: 8px;}
+        footer.contact-us {
+            text-align: center;
+            padding: 1rem 0.5rem;
+            background: #1f1f1f;
+            color: #ccc;
+            margin-top: 3rem;
+        }
+        footer.contact-us a {
+            color: #03a9f4;
+            text-decoration: underline;
+        }
+        @media (max-width: 650px) {
+            .container { padding: 1rem 0.5rem;}
+            .search-container { flex-direction: column; align-items: center;}
+        }
+    </style>
 </head>
 <body>
     <div class="navbar">
@@ -40,7 +175,7 @@
         <!-- Search Results -->
         <div class="search-results" id="movie-results"></div>
 
-        <!-- Advertisement Row -->
+        <!-- Advertisement Row, Trending Movies horizontal scroll -->
         <div class="advertisement-container">
             <h3>Trending Movies</h3>
             <div class="advertisement">
@@ -51,12 +186,13 @@
 
     <!-- Contact Us Footer -->
     <footer class="contact-us">
-        <p>Contact us at: <a href="mailto:abhiramsakhaa@gmail.com">abhiramsakhaa@gmail..com</a></p>
+        <p>Contact us at: <a href="mailto:abhiramsakhaa@gmail.com">abhiramsakhaa@gmail.com</a></p>
     </footer>
 
     <script>
         const API_KEY = "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI3MTQ4NzRiMGY5YjAxM2ZiMmY2YTNmMjE2MmZiMzczMCIsIm5iZiI6MTc0MTY3NzAzMC43MDcsInN1YiI6IjY3Y2ZlMWU2NDJjMGNjYzNjYTFkZDZhNyIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.ZQC4cE7jPNUr6BWvVC5Wn0G06EHGVhiut9eRfflCAio";
         const TMDB_URL = "https://api.themoviedb.org/3";
+        const POSTER_PLACEHOLDER = "https://via.placeholder.com/200x300?text=No+Image";
 
         async function fetchTrendingMovies() {
             try {
@@ -69,17 +205,27 @@
 
                 const data = await response.json();
                 const track = document.getElementById("movie-track");
+                track.innerHTML = "";
+
+                if (!data.results || data.results.length === 0) {
+                    track.innerHTML = "<div style='color:#e50914'>No trending movies found.</div>";
+                    return;
+                }
 
                 data.results.forEach(movie => {
+                    const imgUrl = movie.poster_path
+                        ? `https://image.tmdb.org/t/p/w200${movie.poster_path}`
+                        : POSTER_PLACEHOLDER;
                     const movieElement = `
-                        <div class="movie">
-                            <img src="https://image.tmdb.org/t/p/w200${movie.poster_path}" alt="${movie.title}">
+                        <div class="movie" tabindex="0">
+                            <img src="${imgUrl}" alt="${movie.title}">
                             <p><b>${movie.title}</b></p>
                         </div>
                     `;
-                    track.innerHTML += movieElement;
+                    track.insertAdjacentHTML("beforeend", movieElement);
                 });
             } catch (error) {
+                document.getElementById("movie-track").innerHTML = "<div style='color:#e50914'>Error fetching trending movies.</div>";
                 console.error("Error fetching trending movies:", error);
             }
         }
@@ -87,14 +233,18 @@
         async function searchMovie() {
             const query = document.getElementById("movieSearch").value.trim();
             const language = document.getElementById("languageSelect").value;
+            const resultsContainer = document.getElementById("movie-results");
 
             if (!query) {
                 alert("Please enter a movie name!");
+                resultsContainer.innerHTML = "";
                 return;
             }
 
+            resultsContainer.innerHTML = "<p>Loading...</p>";
+
             try {
-                const response = await fetch(`${TMDB_URL}/search/movie?query=${query}&language=${language}`, {
+                const response = await fetch(`${TMDB_URL}/search/movie?query=${encodeURIComponent(query)}&language=${language}`, {
                     headers: {
                         Authorization: `Bearer ${API_KEY}`,
                         "Content-Type": "application/json"
@@ -102,24 +252,27 @@
                 });
 
                 const data = await response.json();
-                const resultsContainer = document.getElementById("movie-results");
                 resultsContainer.innerHTML = "";
 
-                if (data.results.length === 0) {
+                if (!data.results || data.results.length === 0) {
                     resultsContainer.innerHTML = "<p>No results found.</p>";
                     return;
                 }
 
                 data.results.forEach(movie => {
+                    const imgUrl = movie.poster_path
+                        ? `https://image.tmdb.org/t/p/w200${movie.poster_path}`
+                        : POSTER_PLACEHOLDER;
                     const trailerUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(movie.title + " trailer")}`;
                     const fullMovieUrl = `https://www.google.com/search?q=watch+${encodeURIComponent(movie.title)}+full+movie+online`;
 
                     const movieDiv = document.createElement("div");
                     movieDiv.classList.add("movie");
+                    movieDiv.tabIndex = 0;
                     movieDiv.innerHTML = `
-                        <img src="https://image.tmdb.org/t/p/w200${movie.poster_path}" alt="${movie.title}">
+                        <img src="${imgUrl}" alt="${movie.title}">
                         <p><b>${movie.title}</b></p>
-                        <p>⭐ ${movie.vote_average} | ${movie.release_date}</p>
+                        <p>⭐ ${movie.vote_average ?? 'N/A'} | ${movie.release_date ?? 'N/A'}</p>
                         <div class="movie-buttons">
                             <a href="${trailerUrl}" target="_blank" class="watch-btn">Watch Trailer</a>
                             <a href="${fullMovieUrl}" target="_blank" class="watch-btn">Watch Full Movie</a>
@@ -128,6 +281,7 @@
                     resultsContainer.appendChild(movieDiv);
                 });
             } catch (error) {
+                resultsContainer.innerHTML = "<p style='color:#e50914'>Error fetching movie data.</p>";
                 console.error("Error fetching movie data:", error);
             }
         }
