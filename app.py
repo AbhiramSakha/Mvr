@@ -1,48 +1,41 @@
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask_mail import Mail, Message
+from flask_pymongo import PyMongo
 import sqlite3
 import requests
 import os
 import random
-import smtplib
-from email.mime.text import MIMEText
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
-app.secret_key = "your_secret_key"
 
-# TMDb API Configuration
-TMDB_API_KEY = "314d3f0c5a3e7594114b148aa99cfb67"
-TMDB_READ_ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIzMTRkM2YwYzVhM2U3NTk0MTE0YjE0OGFhOTljZmI2NyIsIm5iZiI6MTc0MTY3NzAzMC43MDcsInN1YiI6IjY3Y2ZlMWU2NDJjMGNjYzNjYTFkZDZhNyIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.M_1Oxd8GK14Iu9hIthAC6KfMuTJFgWY7dP7UiEduEDs"
+# Secret key (use a secure environment variable or config in production)
+app.secret_key = "6121ab04b9d093cccf99d38ce589c5dd66f8796c1de955daa45615707f72b3b6"
 
-HEADERS = {
+# Flask-Mail config - Use your Gmail credentials (app password recommended)
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USERNAME'] = 'abhiramsakhaa@gmail.com'
+app.config['MAIL_PASSWORD'] = 'pxmu khfp gnoz iwfv'
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USE_SSL'] = False
+
+mail = Mail(app)
+
+# MongoDB config for OTP storage (Updated to MongoDB Atlas)
+app.config["MONGO_URI"] = "mongodb+srv://sakhabhiram4566:Ip38KU7Rjtla78k8@cluster0.48js9er.mongodb.net/Movie?retryWrites=true&w=majority&appName=Cluster0"
+mongo = PyMongo(app)
+
+# TMDb API config (keep your API key and token secret)
+TMDB_API_KEY = "714874b0f9b013fb2f6a3f2162fb3730"
+TMDB_READ_ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI3MTQ4NzRiMGY5YjAxM2ZiMmY2YTNmMjE2MmZiMzczMCIsIm5iZiI6MTc0MTY3NzAzMC43MDcsInN1YiI6IjY3Y2ZlMWU2NDJjMGNjYzNjYTFkZDZhNyIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.ZQC4cE7jPNUr6BWvVC5Wn0G06EHGVhiut9eRfflCAio"
+TMDB_HEADERS = {
     "Authorization": f"Bearer {TMDB_READ_ACCESS_TOKEN}",
     "Content-Type": "application/json"
 }
 
-# Email OTP function
-def send_otp_email(email, otp):
-    sender_email = "abhiramsakhaa@gmail.com"
-    sender_password = "wwnf mntd rjhw egen"
-
-    subject = "Your OTP Verification Code"
-    body = f"Your OTP code is: {otp}"
-
-    msg = MIMEText(body)
-    msg["Subject"] = subject
-    msg["From"] = sender_email
-    msg["To"] = email
-
-    try:
-        with smtplib.SMTP("smtp.gmail.com", 587) as server:
-            server.starttls()
-            server.login(sender_email, sender_password)
-            server.send_message(msg)
-        return True
-    except Exception as e:
-        print(f"Error sending email: {e}")
-        return False
-
-# Database setup
+# Initialize SQLite database and create users table if it doesn't exist
 def init_db():
     conn = sqlite3.connect("users.db")
     cursor = conn.cursor()
@@ -59,6 +52,26 @@ def init_db():
 
 init_db()
 
+# Generate random 6-digit OTP string
+def generate_otp():
+    return str(random.randint(100000, 999999))
+
+# Send OTP via email
+def send_otp_email(email, otp):
+    try:
+        msg = Message(
+            subject="Your OTP Code",
+            sender=app.config['MAIL_USERNAME'],
+            recipients=[email],
+            body=f"Your OTP code is: {otp}. This OTP is valid for 10 minutes."
+        )
+        mail.send(msg)
+        print(f"Sent OTP to {email}")
+    except Exception as e:
+        print(f"Failed to send OTP email: {e}")
+
+# --- Routes ---
+
 @app.route("/")
 def home():
     if "user_id" not in session:
@@ -67,9 +80,10 @@ def home():
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    if request.method == "POST":
-        email = request.form["email"]
-        password = request.form["password"]
+    if request.method == "POST" and request.is_json:
+        data = request.get_json()
+        email = data.get("email", "").strip()
+        password = data.get("password", "")
 
         conn = sqlite3.connect("users.db")
         cursor = conn.cursor()
@@ -78,88 +92,148 @@ def login():
         conn.close()
 
         if user and check_password_hash(user[3], password):
-            # Generate OTP
-            otp = str(random.randint(100000, 999999))
-            session["pending_user"] = {"id": user[0], "username": user[1], "email": user[2]}
-            session["otp"] = otp
+            otp = generate_otp()
+            expiry = datetime.utcnow() + timedelta(minutes=10)
 
-            if send_otp_email(user[2], otp):
-                return redirect(url_for("verify_otp"))
-            else:
-                return render_template("login.html", error="Failed to send OTP. Try again.")
+            # Remove old OTPs and store new hashed OTP
+            mongo.db.otps.delete_many({"email": email})
+            mongo.db.otps.insert_one({
+                "email": email,
+                "otp": generate_password_hash(otp),
+                "expiry": expiry
+            })
+            send_otp_email(email, otp)
+
+            # Save pending login info in session
+            session['pending_email'] = email
+            session['pending_user_id'] = user[0]
+            session['pending_username'] = user[1]
+
+            return jsonify(success=True, message="OTP sent to your email.")
         else:
-            return render_template("login.html", error="Invalid credentials")
+            return jsonify(success=False, message="Invalid email or password."), 401
 
+    # For GET and non-JSON POST, serve login page
     return render_template("login.html")
 
-@app.route("/verify_otp", methods=["GET", "POST"])
+@app.route("/verify_otp", methods=["POST"])
 def verify_otp():
-    if request.method == "POST":
-        user_otp = request.form["otp"]
-        if "otp" in session and user_otp == session["otp"]:
-            user = session["pending_user"]
-            session["user_id"] = user["id"]
-            session["username"] = user["username"]
-            session.pop("otp", None)
-            session.pop("pending_user", None)
-            return redirect(url_for("home"))
-        else:
-            return render_template("verify_otp.html", error="Incorrect OTP")
+    email = request.form.get("email", "").strip()
+    password = request.form.get("password", "")
+    input_otp = request.form.get("otp", "").strip()
 
-    return render_template("verify_otp.html")
+    # Check pending info in session
+    if 'pending_email' not in session or session.get('pending_email') != email:
+        return render_template("login.html", error="Session expired. Please log in again.")
+
+    # Verify login credentials again for security
+    conn = sqlite3.connect("users.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
+    user = cursor.fetchone()
+    conn.close()
+
+    if not user or not check_password_hash(user[3], password):
+        return render_template("login.html", error="Invalid credentials. Please try again.")
+
+    otp_record = mongo.db.otps.find_one({"email": email})
+    now = datetime.utcnow()
+
+    if not otp_record:
+        return render_template("login.html", error="No OTP found. Please login again.")
+
+    if otp_record["expiry"] < now:
+        mongo.db.otps.delete_many({"email": email})
+        session.clear()
+        return render_template("login.html", error="OTP expired. Please login again.")
+
+    if check_password_hash(otp_record["otp"], input_otp):
+        session['user_id'] = session.pop('pending_user_id')
+        session['username'] = session.pop('pending_username')
+        session.pop('pending_email', None)
+        mongo.db.otps.delete_many({"email": email})
+        return redirect(url_for("home"))
+    else:
+        return render_template("login.html", error="Invalid OTP. Please try again.")
 
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
+    error = None
     if request.method == "POST":
-        username = request.form["username"]
-        email = request.form["email"]
-        password = request.form["password"]
+        username = request.form.get("username", "").strip()
+        email = request.form.get("email", "").strip()
+        password = request.form.get("password", "")
 
         hashed_password = generate_password_hash(password)
 
         try:
             conn = sqlite3.connect("users.db")
             cursor = conn.cursor()
-            cursor.execute("INSERT INTO users (username, email, password) VALUES (?, ?, ?)",
-                           (username, email, hashed_password))
+            cursor.execute(
+                "INSERT INTO users (username, email, password) VALUES (?, ?, ?)",
+                (username, email, hashed_password)
+            )
             conn.commit()
             conn.close()
             return redirect(url_for("login"))
         except sqlite3.IntegrityError:
-            return render_template("signup.html", error="Email already registered")
+            error = "Email already registered."
 
-    return render_template("signup.html")
+    return render_template("signup.html", error=error)
 
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect(url_for("login"))
 
-@app.route("/recommend", methods=["GET"])
-def recommend():
-    movie_name = request.args.get("movie")
-    if not movie_name:
-        return jsonify({"error": "No movie name provided"}), 400
+# TMDb API proxy endpoints
+@app.route("/api/trending")
+def api_trending():
+    try:
+        resp = requests.get(
+            "https://api.themoviedb.org/3/trending/movie/week",
+            params={"language": "en-US"},
+            headers={"Authorization": f"Bearer {TMDB_READ_ACCESS_TOKEN}"}
+        )
+        resp.raise_for_status()
+        return jsonify(resp.json())
+    except Exception as e:
+        return jsonify({"error": f"TMDb API error: {str(e)}"}), 500
 
-    url = f"https://api.themoviedb.org/3/search/movie?api_key={TMDB_API_KEY}&query={movie_name}"
-    response = requests.get(url, headers=HEADERS)
+@app.route("/api/search")
+def api_search():
+    query = request.args.get("query")
+    language = request.args.get("language", "en-US")
+    if not query:
+        return jsonify({"error": "Missing query parameter"}), 400
+    try:
+        resp = requests.get(
+            "https://api.themoviedb.org/3/search/movie",
+            params={"query": query, "language": language},
+            headers={"Authorization": f"Bearer {TMDB_READ_ACCESS_TOKEN}"}
+        )
+        resp.raise_for_status()
+        return jsonify(resp.json())
+    except Exception as e:
+        return jsonify({"error": f"TMDb API error: {str(e)}"}), 500
 
-    if response.status_code != 200:
-        return jsonify({"error": "Failed to fetch data from TMDb"}), 500
+# Optional test mail route
+@app.route("/testmail")
+def testmail():
+    try:
+        msg = Message(
+            "Test Email From Flask",
+            sender=app.config['MAIL_USERNAME'],
+            recipients=[app.config['MAIL_USERNAME']],
+            body="This is a test email sent from your Flask app."
+        )
+        mail.send(msg)
+        return "Test email sent!"
+    except Exception as e:
+        return f"Failed to send email: {e}"
 
-    data = response.json()
-    results = data.get("results", [])
-
-    recommended_movies = []
-    for movie in results[:5]:
-        recommended_movies.append({
-            "title": movie.get("title"),
-            "overview": movie.get("overview"),
-            "poster": f"https://image.tmdb.org/t/p/w500{movie.get('poster_path')}" if movie.get("poster_path") else None
-        })
-
-    return jsonify({"recommended_movies": recommended_movies})
-
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+# Run app
+if __name__ == "__main__":
+    app.debug = True
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
