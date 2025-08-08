@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Login</title>
   <style>
+    /* Reset and basic styling */
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
     }
-
     body {
       height: 100vh;
       width: 100%;
@@ -21,7 +21,6 @@
       justify-content: center;
       align-items: center;
     }
-
     body::before {
       content: "";
       position: absolute;
@@ -29,7 +28,6 @@
       background: rgba(0, 0, 0, 0.5);
       z-index: 0;
     }
-
     .login-container {
       position: relative;
       z-index: 1;
@@ -43,18 +41,15 @@
       box-shadow: 0 8px 32px rgba(0,0,0,0.25);
       animation: slideIn 1s ease forwards;
     }
-
     @keyframes slideIn {
       from { opacity: 0; transform: translateY(-20px); }
       to { opacity: 1; transform: translateY(0); }
     }
-
     .login-container h2 {
       color: #fff;
       margin-bottom: 20px;
       font-size: 28px;
     }
-
     .login-container form input {
       width: 100%;
       padding: 12px 15px;
@@ -66,16 +61,13 @@
       font-size: 14px;
       transition: background 0.3s ease;
     }
-
     .login-container form input::placeholder {
       color: rgba(255,255,255,0.8);
     }
-
     .login-container form input:focus {
       outline: none;
       background: rgba(255, 255, 255, 0.3);
     }
-
     .login-container form button {
       width: 100%;
       padding: 12px;
@@ -88,38 +80,35 @@
       cursor: pointer;
       transition: transform 0.3s ease;
     }
-
     .login-container form button:hover {
       transform: scale(1.05);
     }
-
     .login-container p {
       color: #fff;
       margin-top: 15px;
       font-size: 14px;
     }
-
     .login-container p a {
       color: #00f7ff;
       text-decoration: none;
       font-weight: bold;
       transition: color 0.3s ease;
     }
-
     .login-container p a:hover {
       color: #ff5edf;
     }
-
     .error {
       color: #ff6961;
       margin-top: 10px;
+      font-weight: bold;
+      min-height: 24px; /* Reserve space even if no message */
     }
-
     .success {
       color: #00ff99;
       margin-top: 10px;
+      font-weight: bold;
+      min-height: 24px;
     }
-
     #otp-field {
       display: none;
     }
@@ -128,59 +117,80 @@
 <body>
   <div class="login-container">
     <h2>Welcome Back 👋</h2>
-    <form id="loginForm" method="POST" action="/verify_otp">
-      <input type="email" name="email" id="email" placeholder="Enter your email" required />
-      <input type="password" name="password" id="password" placeholder="Enter your password" required />
+    <form id="loginForm" method="POST" action="/verify_otp" autocomplete="off">
+      <input type="email" name="email" id="email" placeholder="Enter your email" required autocomplete="email" />
+      <input type="password" name="password" id="password" placeholder="Enter your password" required autocomplete="current-password" />
 
-      <!-- Button to trigger OTP send -->
-      <button type="button" onclick="sendOTP()">Verify OTP</button>
+      <!-- Button to trigger OTP sending -->
+      <button type="button" id="otp-btn" onclick="sendOTP()">Verify OTP</button>
 
-      <!-- OTP Field -->
+      <!-- OTP Input (hidden initially) -->
       <div id="otp-field">
-        <input type="text" name="otp" placeholder="Enter OTP" required />
+        <input type="text" name="otp" placeholder="Enter OTP" maxlength="6" required autocomplete="one-time-code" />
         <button type="submit">Login</button>
       </div>
     </form>
 
-    {% if error %}
-    <p class="error">{{ error }}</p>
-    {% endif %}
+    <p id="message" class="error"></p>
 
-    <p>Don’t have an account? <a href="/signup">Sign Up</a></p>
+    <p>Don’t have an account? <a href="{{ url_for('signup') }}">Sign Up</a></p>
   </div>
 
   <script>
-    function sendOTP() {
-      const email = document.getElementById("email").value;
-      const password = document.getElementById("password").value;
+    async function sendOTP() {
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value.trim();
 
       if (!email || !password) {
-        alert("Please enter both email and password before verifying OTP.");
+        setMsg("Please enter both email and password before verifying OTP.", "error");
         return;
       }
 
-      // Send AJAX POST to /login to trigger OTP send
-      fetch('/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ email: email, password: password })
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          // Show OTP input field
-          document.getElementById("otp-field").style.display = "block";
-        } else {
-          alert(data.message || "Login failed.");
+      const btn = document.getElementById("otp-btn");
+      btn.disabled = true;
+      btn.innerText = "Sending...";
+
+      try {
+        const response = await fetch('/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Login failed.');
         }
-      })
-      .catch(err => {
-        alert("Error sending OTP.");
-        console.error(err);
-      });
+
+        const data = await response.json();
+
+        if (data.success) {
+          setMsg("OTP sent to your email. Please check inbox/spam.", "success");
+          document.getElementById("otp-field").style.display = "block";
+          btn.style.display = "none";
+          document.getElementById("email").readOnly = true;
+          document.getElementById("password").readOnly = true;
+        } else {
+          setMsg(data.message || "Login failed.", "error");
+          btn.disabled = false;
+          btn.innerText = "Verify OTP";
+        }
+
+      } catch (err) {
+        setMsg(err.message || "Error sending OTP.", "error");
+        btn.disabled = false;
+        btn.innerText = "Verify OTP";
+        console.error("Login fetch error:", err);
+      }
     }
+
+    function setMsg(msg, type) {
+      const p = document.getElementById("message");
+      p.textContent = msg;
+      p.className = type;
+    }
+
+    window.onload = () => setMsg("", "");
   </script>
 </body>
 </html>
