@@ -23,7 +23,7 @@ app.config['MAIL_USE_SSL'] = False
 mail = Mail(app)
 
 # ======== MONGODB ATLAS (for OTP) ========
-MONGO_URI = "mongodb+srv://sakhabhiram4566:<TBD1xuAkuiOFUPvo>@cluster0.48js9er.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+MONGO_URI = "MONGO_URI = "mongodb+srv://sakhabhiram4566:TBD1xuAkuiOFUPvo@cluster0.48js9er.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 mongo_client = MongoClient(MONGO_URI)
 db = mongo_client["movie_app"]
 otps_collection = db["otps"]
