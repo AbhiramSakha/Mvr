@@ -77,36 +77,41 @@ def home():
 def login():
     if request.method == "POST":
         if request.is_json:
-            data = request.get_json()
-            email = data.get("email", "").strip()
-            password = data.get("password", "")
+            try:
+                data = request.get_json()
+                email = data.get("email", "").strip()
+                password = data.get("password", "")
 
-            with sqlite3.connect("users.db", timeout=10) as conn:
-                cursor = conn.cursor()
-                cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
-                user = cursor.fetchone()
+                with sqlite3.connect("users.db", timeout=10) as conn:
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
+                    user = cursor.fetchone()
 
-            if user and check_password_hash(user[3], password):
-                otp = generate_otp()
-                expiry = datetime.utcnow() + timedelta(minutes=10)
+                if user and check_password_hash(user[3], password):
+                    otp = generate_otp()
+                    expiry = datetime.utcnow() + timedelta(minutes=10)
 
-                otps_collection.delete_many({"email": email})
-                otps_collection.insert_one({
-                    "email": email,
-                    "otp": generate_password_hash(otp),
-                    "expiry": expiry
-                })
-                send_otp_email(email, otp)
+                    otps_collection.delete_many({"email": email})
+                    otps_collection.insert_one({
+                        "email": email,
+                        "otp": generate_password_hash(otp),
+                        "expiry": expiry
+                    })
+                    send_otp_email(email, otp)
 
-                session['pending_email'] = email
-                session['pending_user_id'] = user[0]
-                session['pending_username'] = user[1]
+                    session['pending_email'] = email
+                    session['pending_user_id'] = user[0]
+                    session['pending_username'] = user[1]
 
-                return jsonify(success=True, message="OTP sent to your email.")
-            else:
-                return jsonify(success=False, message="Invalid email or password."), 401
+                    return jsonify(success=True, message="OTP sent to your email.")
+                else:
+                    return jsonify(success=False, message="Invalid email or password."), 401
 
-        # For normal form access
+            except Exception as e:
+                # ✅ Always return JSON for fetch requests
+                return jsonify(success=False, message=f"Server error: {str(e)}"), 500
+
+        # For normal form (non-AJAX)
         return render_template("login.html")
 
     return render_template("login.html")
