@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_mail import Mail, Message
-from pymongo import MongoClient  # Changed from flask_pymongo to PyMongo
+from pymongo import MongoClient
 import sqlite3
 import requests
 import os
@@ -10,53 +10,48 @@ from datetime import datetime, timedelta
 
 app = Flask(__name__)
 
-# Secret key (keep secure in production)
+# ======== SECRET KEY ========
 app.secret_key = "your secret key"
 
-# Flask-Mail config - using Gmail
+# ======== MAIL CONFIG ========
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
 app.config['MAIL_USERNAME'] = 'abhiramsakhaa@gmail.com'
 app.config['MAIL_PASSWORD'] = 'pxmu khfp gnoz iwfv'
 app.config['MAIL_USE_TLS'] = True
 app.config['MAIL_USE_SSL'] = False
-
 mail = Mail(app)
 
-# ----------------- MongoDB Atlas Connection (PyMongo direct) -----------------
+# ======== MONGODB ATLAS (for OTP) ========
 MONGO_URI = "mongodb+srv://sakhabhiram4566:<7LbHbHXGANDUfy6Q>@cluster0.48js9er.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+mongo_client = MongoClient(MONGO_URI)
+db = mongo_client["movie_app"]
+otps_collection = db["otps"]
 
-client = MongoClient(MONGO_URI)
-db = client["movie_app"]  # You can name this DB as you like
-otps_collection = db["otps"]  # This will store OTP records
-# ------------------------------------------------------------------------------
-
-# TMDb API config
+# ======== TMDb API CONFIG ========
 TMDB_API_KEY = "714874b0f9b013fb2f6a3f2162fb3730"
 TMDB_READ_ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI3MTQ4NzRiMGY5YjAxM2ZiMmY2YTNmMjE2MmZiMzczMCIsIm5iZiI6MTc0MTY3NzAzMC43MDcsInN1YiI6IjY3Y2ZlMWU2NDJjMGNjYzNjYTFkZDZhNyIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.ZQC4cE7jPNUr6BWvVC5Wn0G06EHGVhiut9eRfflCAio"
 
-# Initialize SQLite users DB
+# ======== INIT USERS DB (SQLite) ========
 def init_db():
-    conn = sqlite3.connect("users.db")
-    cursor = conn.cursor()
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT NOT NULL,
-            email TEXT NOT NULL UNIQUE,
-            password TEXT NOT NULL
-        )
-    """)
-    conn.commit()
-    conn.close()
+    with sqlite3.connect("users.db", timeout=10) as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL,
+                email TEXT NOT NULL UNIQUE,
+                password TEXT NOT NULL
+            )
+        """)
+        conn.commit()
 
 init_db()
 
-# Generate OTP
+# ======== HELPER FUNCTIONS ========
 def generate_otp():
     return str(random.randint(100000, 999999))
 
-# Send OTP email
 def send_otp_email(email, otp):
     try:
         msg = Message(
@@ -70,7 +65,7 @@ def send_otp_email(email, otp):
     except Exception as e:
         print(f"Failed to send OTP email: {e}")
 
-# ---------------- Routes ----------------
+# ======== ROUTES ========
 
 @app.route("/")
 def home():
@@ -81,17 +76,15 @@ def home():
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        # Check if request has JSON content
         if request.is_json:
             data = request.get_json()
             email = data.get("email", "").strip()
             password = data.get("password", "")
 
-            conn = sqlite3.connect("users.db")
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
-            user = cursor.fetchone()
-            conn.close()
+            with sqlite3.connect("users.db", timeout=10) as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
+                user = cursor.fetchone()
 
             if user and check_password_hash(user[3], password):
                 otp = generate_otp()
@@ -110,17 +103,13 @@ def login():
                 session['pending_username'] = user[1]
 
                 return jsonify(success=True, message="OTP sent to your email.")
-
             else:
                 return jsonify(success=False, message="Invalid email or password."), 401
 
-        else:
-            # This handles non-JSON POST requests (e.g., form submit), return login page or handle accordingly
-            return render_template("login.html")
+        # For normal form access
+        return render_template("login.html")
 
-    # For GET request, render login page normally
     return render_template("login.html")
-
 
 @app.route("/verify_otp", methods=["POST"])
 def verify_otp():
@@ -131,11 +120,10 @@ def verify_otp():
     if 'pending_email' not in session or session.get('pending_email') != email:
         return render_template("login.html", error="Session expired. Please log in again.")
 
-    conn = sqlite3.connect("users.db")
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
-    user = cursor.fetchone()
-    conn.close()
+    with sqlite3.connect("users.db", timeout=10) as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
+        user = cursor.fetchone()
 
     if not user or not check_password_hash(user[3], password):
         return render_template("login.html", error="Invalid credentials. Please try again.")
@@ -145,7 +133,6 @@ def verify_otp():
 
     if not otp_record:
         return render_template("login.html", error="No OTP found. Please login again.")
-
     if otp_record["expiry"] < now:
         otps_collection.delete_many({"email": email})
         session.clear()
@@ -157,8 +144,8 @@ def verify_otp():
         session.pop('pending_email', None)
         otps_collection.delete_many({"email": email})
         return redirect(url_for("home"))
-    else:
-        return render_template("login.html", error="Invalid OTP. Please try again.")
+
+    return render_template("login.html", error="Invalid OTP. Please try again.")
 
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
@@ -167,21 +154,21 @@ def signup():
         username = request.form.get("username", "").strip()
         email = request.form.get("email", "").strip()
         password = request.form.get("password", "")
-
         hashed_password = generate_password_hash(password)
 
         try:
-            conn = sqlite3.connect("users.db")
-            cursor = conn.cursor()
-            cursor.execute(
-                "INSERT INTO users (username, email, password) VALUES (?, ?, ?)",
-                (username, email, hashed_password)
-            )
-            conn.commit()
-            conn.close()
+            with sqlite3.connect("users.db", timeout=10) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "INSERT INTO users (username, email, password) VALUES (?, ?, ?)",
+                    (username, email, hashed_password)
+                )
+                conn.commit()
             return redirect(url_for("login"))
         except sqlite3.IntegrityError:
             error = "Email already registered."
+        except sqlite3.OperationalError as e:
+            error = f"Database error: {e}"
 
     return render_template("signup.html", error=error)
 
