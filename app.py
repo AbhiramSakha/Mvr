@@ -24,7 +24,8 @@ app.config['MAIL_USE_SSL'] = False
 mail = Mail(app)
 
 # MongoDB config for OTP storage (Updated to MongoDB Atlas)
-app.config["MONGO_URI"] = "mongodb+srv://sakhabhiram4566:Ip38KU7Rjtla78k8@cluster0.48js9er.mongodb.net/Movie?retryWrites=true&w=majority&appName=Cluster0"
+app.config["MONGO_URI"] = "mongodb+srv://sakhabhiram4566:<7LbHbHXGANDUfy6Q>@cluster0.48js9er.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+
 mongo = PyMongo(app)
 
 # TMDb API config (keep your API key and token secret)
