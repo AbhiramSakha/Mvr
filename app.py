@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_mail import Mail, Message
-from flask_pymongo import PyMongo
+from pymongo import MongoClient  # Changed from flask_pymongo to PyMongo
 import sqlite3
 import requests
 import os
@@ -10,10 +10,10 @@ from datetime import datetime, timedelta
 
 app = Flask(__name__)
 
-# Secret key (use a secure environment variable or config in production)
+# Secret key (keep secure in production)
 app.secret_key = "your secret key"
 
-# Flask-Mail config - Use your Gmail credentials (app password recommended)
+# Flask-Mail config - using Gmail
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
 app.config['MAIL_USERNAME'] = 'abhiramsakhaa@gmail.com'
@@ -23,20 +23,19 @@ app.config['MAIL_USE_SSL'] = False
 
 mail = Mail(app)
 
-# MongoDB config for OTP storage (Updated to MongoDB Atlas)
-app.config["MONGO_URI"] = "mongodb+srv://sakhabhiram4566:<7LbHbHXGANDUfy6Q>@cluster0.48js9er.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+# ----------------- MongoDB Atlas Connection (PyMongo direct) -----------------
+MONGO_URI = "mongodb+srv://sakhabhiram4566:<7LbHbHXGANDUfy6Q>@cluster0.48js9er.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 
-mongo = PyMongo(app)
+client = MongoClient(MONGO_URI)
+db = client["movie_app"]  # You can name this DB as you like
+otps_collection = db["otps"]  # This will store OTP records
+# ------------------------------------------------------------------------------
 
-# TMDb API config (keep your API key and token secret)
+# TMDb API config
 TMDB_API_KEY = "714874b0f9b013fb2f6a3f2162fb3730"
 TMDB_READ_ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI3MTQ4NzRiMGY5YjAxM2ZiMmY2YTNmMjE2MmZiMzczMCIsIm5iZiI6MTc0MTY3NzAzMC43MDcsInN1YiI6IjY3Y2ZlMWU2NDJjMGNjYzNjYTFkZDZhNyIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.ZQC4cE7jPNUr6BWvVC5Wn0G06EHGVhiut9eRfflCAio"
-TMDB_HEADERS = {
-    "Authorization": f"Bearer {TMDB_READ_ACCESS_TOKEN}",
-    "Content-Type": "application/json"
-}
 
-# Initialize SQLite database and create users table if it doesn't exist
+# Initialize SQLite users DB
 def init_db():
     conn = sqlite3.connect("users.db")
     cursor = conn.cursor()
@@ -53,11 +52,11 @@ def init_db():
 
 init_db()
 
-# Generate random 6-digit OTP string
+# Generate OTP
 def generate_otp():
     return str(random.randint(100000, 999999))
 
-# Send OTP via email
+# Send OTP email
 def send_otp_email(email, otp):
     try:
         msg = Message(
@@ -71,7 +70,7 @@ def send_otp_email(email, otp):
     except Exception as e:
         print(f"Failed to send OTP email: {e}")
 
-# --- Routes ---
+# ---------------- Routes ----------------
 
 @app.route("/")
 def home():
@@ -96,16 +95,15 @@ def login():
             otp = generate_otp()
             expiry = datetime.utcnow() + timedelta(minutes=10)
 
-            # Remove old OTPs and store new hashed OTP
-            mongo.db.otps.delete_many({"email": email})
-            mongo.db.otps.insert_one({
+            # Remove old OTPs and store new
+            otps_collection.delete_many({"email": email})
+            otps_collection.insert_one({
                 "email": email,
                 "otp": generate_password_hash(otp),
                 "expiry": expiry
             })
             send_otp_email(email, otp)
 
-            # Save pending login info in session
             session['pending_email'] = email
             session['pending_user_id'] = user[0]
             session['pending_username'] = user[1]
@@ -114,7 +112,6 @@ def login():
         else:
             return jsonify(success=False, message="Invalid email or password."), 401
 
-    # For GET and non-JSON POST, serve login page
     return render_template("login.html")
 
 @app.route("/verify_otp", methods=["POST"])
@@ -123,11 +120,9 @@ def verify_otp():
     password = request.form.get("password", "")
     input_otp = request.form.get("otp", "").strip()
 
-    # Check pending info in session
     if 'pending_email' not in session or session.get('pending_email') != email:
         return render_template("login.html", error="Session expired. Please log in again.")
 
-    # Verify login credentials again for security
     conn = sqlite3.connect("users.db")
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
@@ -137,14 +132,14 @@ def verify_otp():
     if not user or not check_password_hash(user[3], password):
         return render_template("login.html", error="Invalid credentials. Please try again.")
 
-    otp_record = mongo.db.otps.find_one({"email": email})
+    otp_record = otps_collection.find_one({"email": email})
     now = datetime.utcnow()
 
     if not otp_record:
         return render_template("login.html", error="No OTP found. Please login again.")
 
     if otp_record["expiry"] < now:
-        mongo.db.otps.delete_many({"email": email})
+        otps_collection.delete_many({"email": email})
         session.clear()
         return render_template("login.html", error="OTP expired. Please login again.")
 
@@ -152,7 +147,7 @@ def verify_otp():
         session['user_id'] = session.pop('pending_user_id')
         session['username'] = session.pop('pending_username')
         session.pop('pending_email', None)
-        mongo.db.otps.delete_many({"email": email})
+        otps_collection.delete_many({"email": email})
         return redirect(url_for("home"))
     else:
         return render_template("login.html", error="Invalid OTP. Please try again.")
@@ -187,7 +182,6 @@ def logout():
     session.clear()
     return redirect(url_for("login"))
 
-# TMDb API proxy endpoints
 @app.route("/api/trending")
 def api_trending():
     try:
@@ -218,7 +212,6 @@ def api_search():
     except Exception as e:
         return jsonify({"error": f"TMDb API error: {str(e)}"}), 500
 
-# Optional test mail route
 @app.route("/testmail")
 def testmail():
     try:
@@ -233,7 +226,6 @@ def testmail():
     except Exception as e:
         return f"Failed to send email: {e}"
 
-# Run app
 if __name__ == "__main__":
     app.debug = True
     port = int(os.environ.get("PORT", 5000))
