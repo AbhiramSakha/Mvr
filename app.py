@@ -80,39 +80,47 @@ def home():
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    if request.method == "POST" and request.is_json:
-        data = request.get_json()
-        email = data.get("email", "").strip()
-        password = data.get("password", "")
+    if request.method == "POST":
+        # Check if request has JSON content
+        if request.is_json:
+            data = request.get_json()
+            email = data.get("email", "").strip()
+            password = data.get("password", "")
 
-        conn = sqlite3.connect("users.db")
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
-        user = cursor.fetchone()
-        conn.close()
+            conn = sqlite3.connect("users.db")
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
+            user = cursor.fetchone()
+            conn.close()
 
-        if user and check_password_hash(user[3], password):
-            otp = generate_otp()
-            expiry = datetime.utcnow() + timedelta(minutes=10)
+            if user and check_password_hash(user[3], password):
+                otp = generate_otp()
+                expiry = datetime.utcnow() + timedelta(minutes=10)
 
-            # Remove old OTPs and store new
-            otps_collection.delete_many({"email": email})
-            otps_collection.insert_one({
-                "email": email,
-                "otp": generate_password_hash(otp),
-                "expiry": expiry
-            })
-            send_otp_email(email, otp)
+                otps_collection.delete_many({"email": email})
+                otps_collection.insert_one({
+                    "email": email,
+                    "otp": generate_password_hash(otp),
+                    "expiry": expiry
+                })
+                send_otp_email(email, otp)
 
-            session['pending_email'] = email
-            session['pending_user_id'] = user[0]
-            session['pending_username'] = user[1]
+                session['pending_email'] = email
+                session['pending_user_id'] = user[0]
+                session['pending_username'] = user[1]
 
-            return jsonify(success=True, message="OTP sent to your email.")
+                return jsonify(success=True, message="OTP sent to your email.")
+
+            else:
+                return jsonify(success=False, message="Invalid email or password."), 401
+
         else:
-            return jsonify(success=False, message="Invalid email or password."), 401
+            # This handles non-JSON POST requests (e.g., form submit), return login page or handle accordingly
+            return render_template("login.html")
 
+    # For GET request, render login page normally
     return render_template("login.html")
+
 
 @app.route("/verify_otp", methods=["POST"])
 def verify_otp():
