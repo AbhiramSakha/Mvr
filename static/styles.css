@@ -177,17 +177,19 @@ body {
     will-change: transform;
     animation: scrollRight 120s linear infinite;
 }
-
-.movie-track .movie {
-    width: 150px;
+.movie {
+    width: 120px;
+    text-align: center;
     flex-shrink: 0;
 }
-
+.movie img {
+    width: 100%;
+    border-radius: 10px;
+}
 @keyframes scrollRight {
     0% { transform: translateX(-100%); }
-    100% { transform: translateX(0%); }
+    100% { transform: translateX(100%); }
 }
-
 /* search container duplicate (cleaned up) */
 .search-container input, .search-container select, .search-container button {
     margin: 5px;
