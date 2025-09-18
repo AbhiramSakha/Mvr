@@ -190,14 +190,33 @@ body {
     0% { transform: translateX(-100%); }
     100% { transform: translateX(100%); }
 }
-/* search container duplicate (cleaned up) */
+//* Search Bar */
+.search-container {
+    text-align: center;
+    margin: 20px 0;
+}
 .search-container input, .search-container select, .search-container button {
+    padding: 10px;
     margin: 5px;
 }
-
-/* consistent typography for movie details */
-.movie p {
-    font-family: 'Poppins', sans-serif;
-    font-weight: 400;
-    color: #eee;
+/* Search Results */
+.search-results {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 20px;
+    margin-top: 20px;
+}
+.movie-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+}
+.watch-btn {
+    background: red;
+    color: white;
+    padding: 5px 10px;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
 }
