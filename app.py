@@ -3,19 +3,18 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_mail import Mail, Message
 from pymongo import MongoClient
 import sqlite3
-import requests
 import os
 import random
 from datetime import datetime, timedelta
 import threading
 
 app = Flask(__name__)
-app.secret_key = "your secret key"
+app.secret_key = "your_secret_key"
 
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
 app.config['MAIL_USERNAME'] = 'abhiramsakhaa@gmail.com'
-app.config['MAIL_PASSWORD'] = 'gors vdqm lpwe dlbp'
+app.config['MAIL_PASSWORD'] = 'gors vdqm lpwe dlbp'  # Gmail App Password
 app.config['MAIL_USE_TLS'] = True
 app.config['MAIL_USE_SSL'] = False
 mail = Mail(app)
@@ -25,7 +24,7 @@ mongo_client = MongoClient(MONGO_URI)
 db = mongo_client["movie_app"]
 otps_collection = db["otps"]
 
-TMDB_READ_ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI3MTQ4NzRiMGY5YjAxM2ZiMmY2YTNmMjE2MmZiMzczMCIsIm5iZiI6MTc0MTY3NzAzMC43MDcsInN1YiI6IjY3Y2ZlMWU2NDJjMGNjYzNjYTFkZDZhNyIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.ZQC4cE7jPNUr6BWvVC5Wn0G06EHGVhiut9eRfflCAio"
+TMDB_READ_ACCESS_TOKEN = "your_tmdb_token_here"
 
 def init_db():
     with sqlite3.connect("users.db", timeout=10) as conn:
@@ -58,7 +57,8 @@ def send_otp_email_async(email, otp):
             print(f"Sent OTP to {email}")
         except Exception as e:
             print(f"Failed to send OTP email: {e}")
-            print(f"Fallback OTP for {email}: {otp}")
+            print(f"Fallback OTP for {email}: {otp}")  # Fallback for testing
+
     threading.Thread(target=send).start()
 
 @app.route("/")
@@ -97,12 +97,15 @@ def login():
                     session['pending_user_id'] = user[0]
                     session['pending_username'] = user[1]
 
-                    return jsonify(success=True, message="OTP sent to your email.")
+                    return jsonify(success=True, message="OTP sent to your email. Check inbox or fallback log.")
                 else:
                     return jsonify(success=False, message="Invalid email or password."), 401
+
             except Exception as e:
                 return jsonify(success=False, message=f"Server error: {str(e)}"), 500
+
         return jsonify(success=False, message="Invalid request format."), 400
+
     return render_template("login.html")
 
 @app.route("/verify_otp", methods=["POST"])
@@ -149,6 +152,7 @@ def signup():
         email = request.form.get("email", "").strip()
         password = request.form.get("password", "")
         hashed_password = generate_password_hash(password)
+
         try:
             with sqlite3.connect("users.db", timeout=10) as conn:
                 cursor = conn.cursor()
@@ -162,6 +166,7 @@ def signup():
             error = "Email already registered."
         except sqlite3.OperationalError as e:
             error = f"Database error: {e}"
+
     return render_template("signup.html", error=error)
 
 @app.route("/logout")
