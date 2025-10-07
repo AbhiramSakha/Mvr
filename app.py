@@ -47,9 +47,17 @@ def generate_otp():
 
 def send_otp_email(email, otp):
     try:
-        print(f"[DEV/Cloud-Safe] OTP for {email}: {otp}")
+        msg = Message(
+            subject="Your OTP Code",
+            sender=app.config['MAIL_USERNAME'],
+            recipients=[email],
+            body=f"Your OTP code is: {otp}. This OTP is valid for 10 minutes."
+        )
+        mail.send(msg)
+        print(f"Sent OTP to {email} (OTP: {otp})")
     except Exception as e:
         print(f"Failed to send OTP email: {e}")
+        print(f"Fallback OTP for {email}: {otp}")
 
 @app.route("/")
 def home():
@@ -87,14 +95,18 @@ def login():
                     session['pending_user_id'] = user[0]
                     session['pending_username'] = user[1]
 
-                    return jsonify(success=True, message="OTP generated. Check console/logs for OTP.")
+                    return jsonify(success=True, message="OTP sent to your email.")
                 else:
                     return jsonify(success=False, message="Invalid email or password."), 401
 
             except Exception as e:
                 return jsonify(success=False, message=f"Server error: {str(e)}"), 500
 
-        return render_template("login.html")
+        if request.headers.get("Content-Type", "").startswith("application/json"):
+            return jsonify(success=False, message="Invalid JSON format."), 400
+        else:
+            return render_template("login.html")
+
     return render_template("login.html")
 
 @app.route("/verify_otp", methods=["POST"])
@@ -202,7 +214,8 @@ def testmail():
             recipients=[app.config['MAIL_USERNAME']],
             body="This is a test email sent from your Flask app."
         )
-        return "Test email logged in console (cloud-safe)."
+        mail.send(msg)
+        return "Test email sent!"
     except Exception as e:
         return f"Failed to send email: {e}"
 
