@@ -5,157 +5,49 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Verify OTP</title>
   <style>
-    /* ---------- Base Reset ---------- */
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
     body {
-      height: 100vh;
-      width: 100%;
-      background: url("{{ url_for('static', filename='images/logi.jpg') }}") center center / cover no-repeat fixed;
-      position: relative;
-      font-family: 'Poppins', sans-serif;
+      font-family: Arial, sans-serif;
+      background: #f0f2f5;
       display: flex;
       justify-content: center;
       align-items: center;
-      overflow: hidden;
+      height: 100vh;
     }
-
-    body::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.55);
-      z-index: 0;
-    }
-
-    /* ---------- OTP Card ---------- */
-    .otp-container {
-      position: relative;
-      z-index: 1;
-      background: rgba(255, 255, 255, 0.12);
-      backdrop-filter: blur(18px);
-      border: 1px solid rgba(255, 255, 255, 0.25);
-      border-radius: 20px;
-      padding: 40px;
-      width: 360px;
-      text-align: center;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.25);
-      animation: fadeIn 0.8s ease forwards;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(-30px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .otp-container h2 {
-      color: #fff;
-      margin-bottom: 20px;
-      font-size: 28px;
-      letter-spacing: 0.5px;
-    }
-
-    /* ---------- Input & Button ---------- */
-    .otp-container form input {
-      width: 100%;
-      padding: 12px 15px;
-      margin: 10px 0;
-      border: none;
+    .container {
+      background: white;
+      padding: 30px;
       border-radius: 10px;
-      background: rgba(255, 255, 255, 0.25);
-      color: #fff;
-      font-size: 15px;
-      text-align: center;
-      letter-spacing: 2px;
-      transition: background 0.3s ease;
+      box-shadow: 0 0 15px rgba(0,0,0,0.2);
     }
-
-    .otp-container form input::placeholder {
-      color: rgba(255,255,255,0.7);
-    }
-
-    .otp-container form input:focus {
-      outline: none;
-      background: rgba(255, 255, 255, 0.35);
-    }
-
-    .otp-container form button {
+    input {
+      display: block;
       width: 100%;
-      padding: 12px;
-      margin-top: 15px;
-      background: linear-gradient(90deg, #00DBDE, #FC00FF);
-      border: none;
-      border-radius: 10px;
-      color: #fff;
-      font-weight: bold;
-      font-size: 15px;
-      cursor: pointer;
-      transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-
-    .otp-container form button:hover {
-      transform: scale(1.05);
-      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-    }
-
-    /* ---------- Alerts ---------- */
-    .message {
-      margin-top: 15px;
       padding: 10px;
-      border-radius: 10px;
-      font-size: 14px;
-      animation: fadeIn 0.6s ease forwards;
+      margin-bottom: 15px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
     }
-
-    .success {
-      color: #00ff99;
-      background: rgba(0, 255, 153, 0.1);
-      border: 1px solid rgba(0, 255, 153, 0.3);
+    button {
+      width: 100%;
+      padding: 10px;
+      background: #ffc107;
+      color: black;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
     }
-
-    .error {
-      color: #ff6961;
-      background: rgba(255, 105, 97, 0.1);
-      border: 1px solid rgba(255, 105, 97, 0.3);
-    }
-
-    /* ---------- Footer Note ---------- */
-    .note {
-      margin-top: 20px;
-      color: rgba(255,255,255,0.8);
-      font-size: 13px;
-    }
-
-    .note span {
-      color: #00DBDE;
-      font-weight: 500;
+    button:hover {
+      background: #e0a800;
     }
   </style>
 </head>
 <body>
-  <div class="otp-container">
-    <h2>Verify OTP 🔐</h2>
-
-    <form method="post">
-      <input type="text" name="otp" placeholder="Enter your OTP" required />
-      <button type="submit">Verify OTP</button>
+  <div class="container">
+    <h2>Verify OTP</h2>
+    <form action="/verify_otp" method="POST">
+      <input type="text" name="otp" placeholder="Enter OTP sent to your email" required />
+      <button type="submit">Verify & Complete Signup</button>
     </form>
-
-    {% if message %}
-      <p class="message success">{{ message }}</p>
-    {% endif %}
-    {% if error %}
-      <p class="message error">{{ error }}</p>
-    {% endif %}
-
-    <p class="note">
-      Didn’t get the OTP? Check your <span>Inbox</span> or <span>Spam</span> folder.  
-      <br>Still no luck? Try logging in again.
-    </p>
   </div>
 </body>
 </html>
