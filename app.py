@@ -8,25 +8,23 @@ import threading
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
-app.secret_key = "supersecretkey123"  # Direct secret key
-
-# ======== MAIL CONFIG (Directly set) ========
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "fallback_secret_key")
+# ===== MAIL CONFIG =====
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
+app.config['MAIL_USERNAME'] = 'abhiramsakhaa@gmail.com'
+app.config['MAIL_PASSWORD'] = 'gors vdqm lpwe dlbp'
 app.config['MAIL_USE_TLS'] = True
 app.config['MAIL_USE_SSL'] = False
-app.config['MAIL_USERNAME'] = "abhiramsakhaa@gmail.com"  # Your Gmail
-app.config['MAIL_PASSWORD'] = "gors vdqm lpwe dlbp"      # Your Gmail App Password
-app.config['MAIL_DEFAULT_SENDER'] = ("Movie App Team", app.config['MAIL_USERNAME'])
 mail = Mail(app)
 
-# ======== MONGODB CONFIG (for OTPs) ========
-MONGO_URI = "your_mongodb_connection_string_here"  # Keep your MongoDB URI here
+# ===== MONGODB =====
+MONGO_URI = "mongodb+srv://SakhaAbhiram:OBdHq4d6J4p18yg7@cluster0.g7auj4v.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 mongo_client = MongoClient(MONGO_URI)
 db = mongo_client["movie_app"]
 otps_collection = db["otps"]
 
-# ======== INIT USERS DB (SQLite) ========
+# ===== INIT USERS DB =====
 def init_db():
     with sqlite3.connect("users.db", timeout=10) as conn:
         cursor = conn.cursor()
@@ -39,9 +37,10 @@ def init_db():
             )
         """)
         conn.commit()
+
 init_db()
 
-# ======== HELPER FUNCTIONS ========
+# ===== HELPER FUNCTIONS =====
 def generate_otp():
     return str(random.randint(100000, 999999))
 
@@ -50,17 +49,19 @@ def send_otp_email_async(email, otp):
         try:
             msg = Message(
                 subject="Your OTP Code",
+                sender=app.config['MAIL_USERNAME'],
                 recipients=[email],
-                body=f"Your OTP code is: {otp}\nThis code expires in 10 minutes."
+                body=f"Your OTP code is: {otp}\n\nIt expires in 10 minutes."
             )
             mail.send(msg)
-            print(f"✅ OTP sent to {email}")
+            print(f"✅ OTP email sent to {email}")
         except Exception as e:
             print(f"❌ Failed to send OTP: {e}")
-            print(f"💡 Debug OTP for testing: {otp}")  # fallback
+            print(f"💡 Debug OTP: {otp}")  # Show OTP in console if email fails
+
     threading.Thread(target=send).start()
 
-# ======== ROUTES ========
+# ===== ROUTES =====
 @app.route("/")
 def home():
     if "user_id" not in session:
@@ -70,71 +71,75 @@ def home():
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        email = request.form.get("email", "").strip()
-        password = request.form.get("password", "")
+        try:
+            if request.is_json:
+                data = request.get_json(force=True)
+                email = data.get("email", "").strip()
+                password = data.get("password", "")
 
-        with sqlite3.connect("users.db", timeout=10) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
-            user = cursor.fetchone()
+                with sqlite3.connect("users.db", timeout=10) as conn:
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
+                    user = cursor.fetchone()
 
-        if not user or not check_password_hash(user[3], password):
-            return render_template("login.html", error="Invalid email or password.")
+                if not user or not check_password_hash(user[3], password):
+                    return jsonify(success=False, message="Invalid email or password."), 401
 
-        # Generate OTP
-        otp = generate_otp()
-        expiry = datetime.utcnow() + timedelta(minutes=10)
+                otp = generate_otp()
+                expiry = datetime.utcnow() + timedelta(minutes=10)
 
-        otps_collection.delete_many({"email": email})
-        otps_collection.insert_one({
-            "email": email,
-            "otp": generate_password_hash(otp),
-            "expiry": expiry
-        })
+                otps_collection.delete_many({"email": email})
+                otps_collection.insert_one({
+                    "email": email,
+                    "otp": generate_password_hash(otp),
+                    "expiry": expiry
+                })
 
-        send_otp_email_async(email, otp)
-        print(f"📧 Sending OTP to {email}")
+                send_otp_email_async(email, otp)
+                session['pending_email'] = email
+                session['pending_user_id'] = user[0]
+                session['pending_username'] = user[1]
+                session['debug_otp'] = otp  # TEMP: for testing if email fails
 
-        # Store pending login session
-        session['pending_email'] = email
-        session['pending_user_id'] = user[0]
-        session['pending_username'] = user[1]
+                return jsonify(success=True, message="OTP sent! Check inbox/spam.")
 
-        return redirect(url_for("verify_otp"))
+            return jsonify(success=False, message="Invalid request format."), 400
+
+        except Exception as e:
+            return jsonify(success=False, message=f"Server error: {str(e)}"), 500
 
     return render_template("login.html")
 
 @app.route("/verify_otp", methods=["GET", "POST"])
 def verify_otp():
     if request.method == "POST":
+        email = request.form.get("email", "").strip()
         input_otp = request.form.get("otp", "").strip()
-        email = session.get("pending_email")
-        if not email:
-            return redirect(url_for("login"))
+
+        if 'pending_email' not in session or session.get('pending_email') != email:
+            return render_template("verify_otp.html", error="Session expired. Login again.")
 
         otp_record = otps_collection.find_one({"email": email})
         now = datetime.utcnow()
 
         if not otp_record:
-            session.clear()
-            return render_template("login.html", error="No OTP found. Please login again.")
+            return render_template("verify_otp.html", error="No OTP found. Login again.")
         if otp_record["expiry"] < now:
             otps_collection.delete_many({"email": email})
             session.clear()
-            return render_template("login.html", error="OTP expired. Please login again.")
+            return render_template("verify_otp.html", error="OTP expired. Login again.")
 
         if check_password_hash(otp_record["otp"], input_otp):
-            # OTP correct: login successful
             session['user_id'] = session.pop('pending_user_id')
             session['username'] = session.pop('pending_username')
             session.pop('pending_email', None)
             otps_collection.delete_many({"email": email})
+            session.pop('debug_otp', None)
             return redirect(url_for("home"))
-        else:
-            return render_template("verify_otp.html", error="Invalid OTP. Please try again.")
 
-    # GET request: show verify_otp page
-    return render_template("verify_otp.html", message="✅ OTP sent! Check inbox or spam folder.")
+        return render_template("verify_otp.html", error="Invalid OTP. Try again.")
+
+    return render_template("verify_otp.html", debug_otp=session.get('debug_otp'))
 
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
@@ -156,6 +161,8 @@ def signup():
             return redirect(url_for("login"))
         except sqlite3.IntegrityError:
             error = "Email already registered."
+        except sqlite3.OperationalError as e:
+            error = f"Database error: {e}"
 
     return render_template("signup.html", error=error)
 
@@ -164,18 +171,6 @@ def logout():
     session.clear()
     return redirect(url_for("login"))
 
-@app.route("/testmail")
-def testmail():
-    try:
-        msg = Message(
-            "Test Email From Flask",
-            recipients=[app.config['MAIL_USERNAME']],
-            body="✅ This is a test email from your Flask app."
-        )
-        mail.send(msg)
-        return "✅ Test email sent! Check inbox/spam."
-    except Exception as e:
-        return f"❌ Failed to send email: {e}"
-
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    app.debug = True
+    app.run(host="0.0.0.0", port=5000)
