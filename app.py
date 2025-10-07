@@ -24,7 +24,6 @@ mail = Mail(app)
 
 # ======== MONGODB ATLAS (for OTP) ========
 MONGO_URI = os.getenv("MONGO_URI")
-
 mongo_client = MongoClient(MONGO_URI)
 db = mongo_client["movie_app"]
 otps_collection = db["otps"]
@@ -77,9 +76,10 @@ def home():
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
+        # ✅ Handle JSON requests (from fetch)
         if request.is_json:
             try:
-                data = request.get_json()
+                data = request.get_json(force=True)
                 email = data.get("email", "").strip()
                 password = data.get("password", "")
 
@@ -104,16 +104,20 @@ def login():
                     session['pending_user_id'] = user[0]
                     session['pending_username'] = user[1]
 
+                    # ✅ Always return JSON for fetch
                     return jsonify(success=True, message="OTP sent to your email.")
                 else:
                     return jsonify(success=False, message="Invalid email or password."), 401
 
             except Exception as e:
-                # ✅ Always return JSON for fetch requests
+                # ✅ Always return JSON even on error
                 return jsonify(success=False, message=f"Server error: {str(e)}"), 500
 
-        # For normal form (non-AJAX)
-        return render_template("login.html")
+        # ✅ For non-AJAX (normal browser POST)
+        if request.headers.get("Content-Type", "").startswith("application/json"):
+            return jsonify(success=False, message="Invalid JSON format."), 400
+        else:
+            return render_template("login.html")
 
     return render_template("login.html")
 
