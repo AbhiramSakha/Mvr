@@ -10,30 +10,36 @@ import threading
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 
-# ======== LOAD .ENV CONFIG ========
+# ======== LOAD ENV ONLY FOR MONGO URI ========
 load_dotenv()
+MONGO_URI = os.getenv("MONGO_URI")
 
 app = Flask(__name__)
-app.secret_key = os.getenv("SECRET_KEY", "your_secret_key")
 
-# ======== MAIL CONFIG ========
+# ======== SECRET KEY (Hardcoded) ========
+app.secret_key = "super_secret_key_123"
+
+# ======== MAIL CONFIG (Directly set here) ========
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
-app.config['MAIL_USERNAME'] = os.getenv("MAIL_USERNAME", "abhiramsakhaa@gmail.com")
-app.config['MAIL_PASSWORD'] = os.getenv("MAIL_PASSWORD", "gors vdqm lpwe dlbp")  # Gmail App Password
 app.config['MAIL_USE_TLS'] = True
 app.config['MAIL_USE_SSL'] = False
+app.config['MAIL_USERNAME'] = "abhiramsakhaa@gmail.com"  # Your Gmail
+app.config['MAIL_PASSWORD'] = "gors vdqm lpwe dlbp"      # Your Gmail App Password
+app.config['MAIL_DEFAULT_SENDER'] = ("Movie App Team", app.config['MAIL_USERNAME'])
 mail = Mail(app)
 
-# ======== MONGODB (for OTPs) ========
-MONGO_URI = os.getenv("MONGO_URI")
+
+# ======== MONGODB (Only OTPs) ========
 mongo_client = MongoClient(MONGO_URI)
 db = mongo_client["movie_app"]
 otps_collection = db["otps"]
 
 # ======== TMDb CONFIG ========
-TMDB_API_KEY = os.getenv("TMDB_API_KEY", "714874b0f9b013fb2f6a3f2162fb3730")
-TMDB_READ_ACCESS_TOKEN = os.getenv("TMDB_READ_ACCESS_TOKEN")
+TMDB_API_KEY = "714874b0f9b013fb2f6a3f2162fb3730"
+TMDB_READ_ACCESS_TOKEN = (
+    "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI3MTQ4NzRiMGY5YjAxM2ZiMmY2YTNmMjE2MmZiMzczMCIsIm5iZiI6MTc0MTY3NzAzMC43MDcsInN1YiI6IjY3Y2ZlMWU2NDJjMGNjYzNjYTFkZDZhNyIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.ZQC4cE7jPNUr6BWvVC5Wn0G06EHGVhiut9eRfflCAio"
+)
 
 # ======== INIT USERS DB ========
 def init_db():
@@ -56,24 +62,29 @@ def generate_otp():
     return str(random.randint(100000, 999999))
 
 def send_otp_email_async(email, otp):
-    """Send OTP email in a background thread with improved logging."""
+    """Send OTP email asynchronously with strong logging."""
     def send():
         try:
             msg = Message(
-                subject="Your OTP Code",
-                sender=app.config['MAIL_USERNAME'],
+                subject="🎬 Your OTP Verification Code",
                 recipients=[email],
-                body=(
-                    f"Your OTP code is: {otp}\n\n"
-                    f"This code will expire in 10 minutes.\n"
-                    f"If you didn't request this, please ignore."
-                )
+                body=f"""
+Hello {email},
+
+Your One-Time Password (OTP) is: {otp}
+
+This OTP will expire in 10 minutes.
+If you did not request this, you can safely ignore this message.
+
+Best regards,  
+Movie App Team 🎥
+"""
             )
             mail.send(msg)
-            print(f"✅ OTP email successfully sent to {email}")
+            print(f"✅ OTP successfully sent to {email}")
         except Exception as e:
-            print(f"❌ Failed to send OTP to {email}: {e}")
-            print(f"💡 Debug OTP (for testing): {otp}")
+            print(f"❌ Email sending failed for {email}: {e}")
+            print(f"💡 Fallback OTP (debug): {otp}")
 
     threading.Thread(target=send).start()
 
@@ -112,21 +123,16 @@ def login():
                     "expiry": expiry
                 })
 
-                try:
-                    send_otp_email_async(email, otp)
-                    print(f"📧 Sending OTP to {email} ...")
-                    message = "✅ OTP sent! Please check your inbox or spam folder."
-                except Exception as e:
-                    print(f"❌ OTP sending failed: {e}")
-                    message = "⚠️ Failed to send OTP. Please try again later."
+                send_otp_email_async(email, otp)
+                print(f"📧 OTP being sent to {email}...")
 
                 session['pending_email'] = email
                 session['pending_user_id'] = user[0]
                 session['pending_username'] = user[1]
 
-                return jsonify(success=True, message=message)
-
+                return jsonify(success=True, message="✅ OTP sent successfully! Check your inbox or spam folder.")
             except Exception as e:
+                print(f"⚠️ Server Error: {e}")
                 return jsonify(success=False, message=f"Server error: {str(e)}"), 500
 
         return jsonify(success=False, message="Invalid request format."), 400
@@ -140,7 +146,7 @@ def verify_otp():
     input_otp = request.form.get("otp", "").strip()
 
     if 'pending_email' not in session or session.get('pending_email') != email:
-        return render_template("login.html", error="Session expired. Please login again.")
+        return render_template("login.html", error="Session expired. Please log in again.")
 
     with sqlite3.connect("users.db", timeout=10) as conn:
         cursor = conn.cursor()
@@ -201,18 +207,19 @@ def logout():
 
 @app.route("/testmail")
 def testmail():
+    """Quick test to confirm Gmail SMTP works."""
     try:
         msg = Message(
-            "Test Email From Flask",
-            sender=app.config['MAIL_USERNAME'],
+            "✅ Test Email from Movie App",
             recipients=[app.config['MAIL_USERNAME']],
-            body="✅ This is a test email sent from your Flask app."
+            body="This is a test email sent successfully from your Flask Movie App!"
         )
         mail.send(msg)
-        return "✅ Test email sent successfully! Please check your inbox/spam."
+        return "✅ Test email sent! Check your inbox/spam folder."
     except Exception as e:
-        return f"❌ Failed to send email: {e}"
+        return f"❌ Failed to send test email: {e}"
 
+# ======== RUN APP ========
 if __name__ == "__main__":
     app.debug = True
     port = int(os.environ.get("PORT", 5000))
