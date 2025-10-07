@@ -89,30 +89,30 @@
       btn.innerText = "Sending...";
 
       try {
-        const response = await fetch('/login', {
+        const response = await fetch('/send_otp', {  // ✅ changed route name for clarity
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password })
         });
 
-        let data;
-        const contentType = response.headers.get("content-type") || "";
-        if (contentType.includes("application/json")) {
-          data = await response.json();
-        } else {
-          throw new Error("Server did not return valid JSON.");
+        if (!response.ok) {
+          throw new Error("Server error: " + response.status);
         }
 
-        if (response.ok && data.success) {
+        // ✅ Safely check content type before parsing JSON
+        const contentType = response.headers.get("content-type") || "";
+        if (!contentType.includes("application/json")) {
+          throw new Error("Invalid response format from server. Expected JSON.");
+        }
+
+        const data = await response.json();
+
+        if (data.success) {
           setMsg("OTP sent to your email. Please check inbox/spam.", "success");
           document.getElementById("otp-field").style.display = "block";
           btn.style.display = "none";
           document.getElementById("email").readOnly = true;
           document.getElementById("password").readOnly = true;
-          document.getElementById("otp").focus();
         } else {
           setMsg(data.message || "Login failed.", "error");
           btn.disabled = false;
