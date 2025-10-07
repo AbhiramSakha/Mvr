@@ -52,13 +52,13 @@
     .login-container p a:hover { color: #ff5edf; }
     .error { color: #ff6961; margin-top: 10px; font-weight: bold; min-height: 24px; }
     .success { color: #00ff99; margin-top: 10px; font-weight: bold; min-height: 24px; }
-    #otp-field { display: none; }
+    #otp-field { display: none; margin-top: 10px; }
   </style>
 </head>
 <body>
   <div class="login-container">
     <h2>Welcome Back 👋</h2>
-    <form id="loginForm" method="POST" action="/verify_otp" autocomplete="off">
+    <form id="loginForm" autocomplete="off">
       <input type="email" name="email" id="email" placeholder="Enter your email" required autocomplete="email" />
       <input type="password" name="password" id="password" placeholder="Enter your password" required autocomplete="current-password" />
 
@@ -78,61 +78,61 @@
     async function sendOTP() {
       const email = document.getElementById("email").value.trim();
       const password = document.getElementById("password").value.trim();
+      const messageBox = document.getElementById("message");
+      const otpSection = document.getElementById("otp-field");
+      const otpBtn = document.getElementById("otp-btn");
 
       if (!email || !password) {
-        setMsg("Please enter both email and password before verifying OTP.", "error");
+        messageBox.textContent = "Please enter both email and password.";
+        messageBox.className = "error";
         return;
       }
 
-      const btn = document.getElementById("otp-btn");
-      btn.disabled = true;
-      btn.innerText = "Sending...";
+      otpBtn.disabled = true;
+      otpBtn.innerText = "Sending OTP...";
+      messageBox.textContent = "";
 
       try {
-        const response = await fetch('/send_otp', {  // ✅ changed route name for clarity
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        const response = await fetch("/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, password })
         });
 
-        if (!response.ok) {
-          throw new Error("Server error: " + response.status);
-        }
-
-        // ✅ Safely check content type before parsing JSON
-        const contentType = response.headers.get("content-type") || "";
-        if (!contentType.includes("application/json")) {
-          throw new Error("Invalid response format from server. Expected JSON.");
-        }
-
         const data = await response.json();
 
-        if (data.success) {
-          setMsg("OTP sent to your email. Please check inbox/spam.", "success");
-          document.getElementById("otp-field").style.display = "block";
-          btn.style.display = "none";
+        if (response.ok && data.success) {
+          messageBox.textContent = data.message;
+          messageBox.className = "success";
+          otpSection.style.display = "block";
+          otpBtn.style.display = "none";
           document.getElementById("email").readOnly = true;
           document.getElementById("password").readOnly = true;
+          document.getElementById("otp").focus();
         } else {
-          setMsg(data.message || "Login failed.", "error");
-          btn.disabled = false;
-          btn.innerText = "Verify OTP";
+          messageBox.textContent = data.message || "Failed to send OTP.";
+          messageBox.className = "error";
+          otpBtn.disabled = false;
+          otpBtn.innerText = "Verify OTP";
         }
-      } catch (err) {
-        setMsg(err.message || "Error sending OTP.", "error");
-        btn.disabled = false;
-        btn.innerText = "Verify OTP";
-        console.error("Login fetch error:", err);
+      } catch (error) {
+        console.error("Login fetch error:", error);
+        messageBox.textContent = "Server error. Please try again.";
+        messageBox.className = "error";
+        otpBtn.disabled = false;
+        otpBtn.innerText = "Verify OTP";
       }
     }
 
-    function setMsg(msg, type) {
-      const p = document.getElementById("message");
-      p.textContent = msg;
-      p.className = type;
-    }
+    // Submit OTP form
+    document.getElementById("loginForm").addEventListener("submit", async function(e) {
+      // Normal form submission to /verify_otp
+    });
 
-    window.onload = () => setMsg("", "");
+    window.onload = () => {
+      const messageBox = document.getElementById("message");
+      if (messageBox) messageBox.textContent = "";
+    };
   </script>
 </body>
 </html>
