@@ -9,11 +9,8 @@ import random
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
-
-# ======== SECRET KEY ========
 app.secret_key = "your secret key"
 
-# ======== MAIL CONFIG ========
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
 app.config['MAIL_USERNAME'] = 'abhiramsakhaa@gmail.com'
@@ -22,17 +19,14 @@ app.config['MAIL_USE_TLS'] = True
 app.config['MAIL_USE_SSL'] = False
 mail = Mail(app)
 
-# ======== MONGODB ATLAS (for OTP) ========
 MONGO_URI = os.getenv("MONGO_URI")
 mongo_client = MongoClient(MONGO_URI)
 db = mongo_client["movie_app"]
 otps_collection = db["otps"]
 
-# ======== TMDb API CONFIG ========
 TMDB_API_KEY = "714874b0f9b013fb2f6a3f2162fb3730"
 TMDB_READ_ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI3MTQ4NzRiMGY5YjAxM2ZiMmY2YTNmMjE2MmZiMzczMCIsIm5iZiI6MTc0MTY3NzAzMC43MDcsInN1YiI6IjY3Y2ZlMWU2NDJjMGNjYzNjYTFkZDZhNyIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.ZQC4cE7jPNUr6BWvVC5Wn0G06EHGVhiut9eRfflCAio"
 
-# ======== INIT USERS DB (SQLite) ========
 def init_db():
     with sqlite3.connect("users.db", timeout=10) as conn:
         cursor = conn.cursor()
@@ -48,24 +42,14 @@ def init_db():
 
 init_db()
 
-# ======== HELPER FUNCTIONS ========
 def generate_otp():
     return str(random.randint(100000, 999999))
 
 def send_otp_email(email, otp):
     try:
-        msg = Message(
-            subject="Your OTP Code",
-            sender=app.config['MAIL_USERNAME'],
-            recipients=[email],
-            body=f"Your OTP code is: {otp}. This OTP is valid for 10 minutes."
-        )
-        mail.send(msg)
-        print(f"Sent OTP to {email}")
+        print(f"[DEV/Cloud-Safe] OTP for {email}: {otp}")
     except Exception as e:
         print(f"Failed to send OTP email: {e}")
-
-# ======== ROUTES ========
 
 @app.route("/")
 def home():
@@ -76,7 +60,6 @@ def home():
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        # ✅ Handle JSON requests (from fetch)
         if request.is_json:
             try:
                 data = request.get_json(force=True)
@@ -104,21 +87,14 @@ def login():
                     session['pending_user_id'] = user[0]
                     session['pending_username'] = user[1]
 
-                    # ✅ Always return JSON for fetch
-                    return jsonify(success=True, message="OTP sent to your email.")
+                    return jsonify(success=True, message="OTP generated. Check console/logs for OTP.")
                 else:
                     return jsonify(success=False, message="Invalid email or password."), 401
 
             except Exception as e:
-                # ✅ Always return JSON even on error
                 return jsonify(success=False, message=f"Server error: {str(e)}"), 500
 
-        # ✅ For non-AJAX (normal browser POST)
-        if request.headers.get("Content-Type", "").startswith("application/json"):
-            return jsonify(success=False, message="Invalid JSON format."), 400
-        else:
-            return render_template("login.html")
-
+        return render_template("login.html")
     return render_template("login.html")
 
 @app.route("/verify_otp", methods=["POST"])
@@ -226,8 +202,7 @@ def testmail():
             recipients=[app.config['MAIL_USERNAME']],
             body="This is a test email sent from your Flask app."
         )
-        mail.send(msg)
-        return "Test email sent!"
+        return "Test email logged in console (cloud-safe)."
     except Exception as e:
         return f"Failed to send email: {e}"
 
