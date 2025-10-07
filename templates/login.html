@@ -5,72 +5,134 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Login</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    /* Reset and basic styling */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
     body {
-      height: 100vh; width: 100%;
+      height: 100vh;
+      width: 100%;
       background: url("{{ url_for('static', filename='images/logi.jpg') }}") center center / cover no-repeat fixed;
-      font-family: 'Poppins', sans-serif;
-      display: flex; justify-content: center; align-items: center;
       position: relative;
+      font-family: 'Poppins', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
     body::before {
       content: "";
-      position: absolute; inset: 0;
+      position: absolute;
+      inset: 0;
       background: rgba(0, 0, 0, 0.5);
       z-index: 0;
     }
     .login-container {
-      position: relative; z-index: 1;
+      position: relative;
+      z-index: 1;
       background: rgba(255, 255, 255, 0.1);
       backdrop-filter: blur(15px);
       border: 1px solid rgba(255, 255, 255, 0.2);
       border-radius: 20px;
-      padding: 40px; width: 350px; text-align: center;
+      padding: 40px;
+      width: 350px;
+      text-align: center;
       box-shadow: 0 8px 32px rgba(0,0,0,0.25);
       animation: slideIn 1s ease forwards;
     }
-    @keyframes slideIn { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
-    .login-container h2 { color: #fff; margin-bottom: 20px; font-size: 28px; }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .login-container h2 {
+      color: #fff;
+      margin-bottom: 20px;
+      font-size: 28px;
+    }
     .login-container form input {
-      width: 100%; padding: 12px 15px; margin: 10px 0;
-      border: none; border-radius: 10px;
-      background: rgba(255, 255, 255, 0.2); color: #fff; font-size: 14px;
+      width: 100%;
+      padding: 12px 15px;
+      margin: 10px 0;
+      border: none;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.2);
+      color: #fff;
+      font-size: 14px;
       transition: background 0.3s ease;
     }
-    .login-container form input::placeholder { color: rgba(255,255,255,0.8); }
-    .login-container form input:focus { outline: none; background: rgba(255, 255, 255, 0.3); }
+    .login-container form input::placeholder {
+      color: rgba(255,255,255,0.8);
+    }
+    .login-container form input:focus {
+      outline: none;
+      background: rgba(255, 255, 255, 0.3);
+    }
     .login-container form button {
-      width: 100%; padding: 12px; margin-top: 10px;
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
       background: linear-gradient(90deg, #00DBDE, #FC00FF);
-      border: none; border-radius: 10px;
-      color: #fff; font-weight: bold; cursor: pointer;
+      border: none;
+      border-radius: 10px;
+      color: #fff;
+      font-weight: bold;
+      cursor: pointer;
       transition: transform 0.3s ease;
     }
-    .login-container form button:hover { transform: scale(1.05); }
-    .login-container p { color: #fff; margin-top: 15px; font-size: 14px; }
-    .login-container p a { color: #00f7ff; text-decoration: none; font-weight: bold; transition: color 0.3s ease; }
-    .login-container p a:hover { color: #ff5edf; }
-    .error { color: #ff6961; margin-top: 10px; font-weight: bold; min-height: 24px; }
-    .success { color: #00ff99; margin-top: 10px; font-weight: bold; min-height: 24px; }
-    #otp-field { display: none; margin-top: 10px; }
+    .login-container form button:hover {
+      transform: scale(1.05);
+    }
+    .login-container p {
+      color: #fff;
+      margin-top: 15px;
+      font-size: 14px;
+    }
+    .login-container p a {
+      color: #00f7ff;
+      text-decoration: none;
+      font-weight: bold;
+      transition: color 0.3s ease;
+    }
+    .login-container p a:hover {
+      color: #ff5edf;
+    }
+    .error {
+      color: #ff6961;
+      margin-top: 10px;
+      font-weight: bold;
+      min-height: 24px; /* Reserve space even if no message */
+    }
+    .success {
+      color: #00ff99;
+      margin-top: 10px;
+      font-weight: bold;
+      min-height: 24px;
+    }
+    #otp-field {
+      display: none;
+    }
   </style>
 </head>
 <body>
   <div class="login-container">
     <h2>Welcome Back 👋</h2>
-    <form id="loginForm" autocomplete="off">
+    <form id="loginForm" method="POST" action="/verify_otp" autocomplete="off">
       <input type="email" name="email" id="email" placeholder="Enter your email" required autocomplete="email" />
       <input type="password" name="password" id="password" placeholder="Enter your password" required autocomplete="current-password" />
 
+      <!-- Button to trigger OTP sending -->
       <button type="button" id="otp-btn" onclick="sendOTP()">Verify OTP</button>
 
+      <!-- OTP Input (hidden initially) -->
       <div id="otp-field">
-        <input type="text" name="otp" id="otp" placeholder="Enter OTP" maxlength="6" required autocomplete="one-time-code" />
+        <input type="text" name="otp" placeholder="Enter OTP" maxlength="6" required autocomplete="one-time-code" />
         <button type="submit">Login</button>
       </div>
     </form>
 
     <p id="message" class="error"></p>
+
     <p>Don’t have an account? <a href="{{ url_for('signup') }}">Sign Up</a></p>
   </div>
 
@@ -78,61 +140,57 @@
     async function sendOTP() {
       const email = document.getElementById("email").value.trim();
       const password = document.getElementById("password").value.trim();
-      const messageBox = document.getElementById("message");
-      const otpSection = document.getElementById("otp-field");
-      const otpBtn = document.getElementById("otp-btn");
 
       if (!email || !password) {
-        messageBox.textContent = "Please enter both email and password.";
-        messageBox.className = "error";
+        setMsg("Please enter both email and password before verifying OTP.", "error");
         return;
       }
 
-      otpBtn.disabled = true;
-      otpBtn.innerText = "Sending OTP...";
-      messageBox.textContent = "";
+      const btn = document.getElementById("otp-btn");
+      btn.disabled = true;
+      btn.innerText = "Sending...";
 
       try {
-        const response = await fetch("/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+        const response = await fetch('/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
           body: JSON.stringify({ email, password })
         });
 
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Login failed.');
+        }
+
         const data = await response.json();
 
-        if (response.ok && data.success) {
-          messageBox.textContent = data.message;
-          messageBox.className = "success";
-          otpSection.style.display = "block";
-          otpBtn.style.display = "none";
+        if (data.success) {
+          setMsg("OTP sent to your email. Please check inbox/spam.", "success");
+          document.getElementById("otp-field").style.display = "block";
+          btn.style.display = "none";
           document.getElementById("email").readOnly = true;
           document.getElementById("password").readOnly = true;
-          document.getElementById("otp").focus();
         } else {
-          messageBox.textContent = data.message || "Failed to send OTP.";
-          messageBox.className = "error";
-          otpBtn.disabled = false;
-          otpBtn.innerText = "Verify OTP";
+          setMsg(data.message || "Login failed.", "error");
+          btn.disabled = false;
+          btn.innerText = "Verify OTP";
         }
-      } catch (error) {
-        console.error("Login fetch error:", error);
-        messageBox.textContent = "Server error. Please try again.";
-        messageBox.className = "error";
-        otpBtn.disabled = false;
-        otpBtn.innerText = "Verify OTP";
+
+      } catch (err) {
+        setMsg(err.message || "Error sending OTP.", "error");
+        btn.disabled = false;
+        btn.innerText = "Verify OTP";
+        console.error("Login fetch error:", err);
       }
     }
 
-    // Submit OTP form
-    document.getElementById("loginForm").addEventListener("submit", async function(e) {
-      // Normal form submission to /verify_otp
-    });
+    function setMsg(msg, type) {
+      const p = document.getElementById("message");
+      p.textContent = msg;
+      p.className = type;
+    }
 
-    window.onload = () => {
-      const messageBox = document.getElementById("message");
-      if (messageBox) messageBox.textContent = "";
-    };
+    window.onload = () => setMsg("", "");
   </script>
 </body>
 </html>
