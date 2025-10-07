@@ -7,6 +7,7 @@ import requests
 import os
 import random
 from datetime import datetime, timedelta
+import threading
 
 app = Flask(__name__)
 app.secret_key = "your secret key"
@@ -24,7 +25,6 @@ mongo_client = MongoClient(MONGO_URI)
 db = mongo_client["movie_app"]
 otps_collection = db["otps"]
 
-TMDB_API_KEY = "714874b0f9b013fb2f6a3f2162fb3730"
 TMDB_READ_ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI3MTQ4NzRiMGY5YjAxM2ZiMmY2YTNmMjE2MmZiMzczMCIsIm5iZiI6MTc0MTY3NzAzMC43MDcsInN1YiI6IjY3Y2ZlMWU2NDJjMGNjYzNjYTFkZDZhNyIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.ZQC4cE7jPNUr6BWvVC5Wn0G06EHGVhiut9eRfflCAio"
 
 def init_db():
@@ -45,19 +45,21 @@ init_db()
 def generate_otp():
     return str(random.randint(100000, 999999))
 
-def send_otp_email(email, otp):
-    try:
-        msg = Message(
-            subject="Your OTP Code",
-            sender=app.config['MAIL_USERNAME'],
-            recipients=[email],
-            body=f"Your OTP code is: {otp}. This OTP is valid for 10 minutes."
-        )
-        mail.send(msg)
-        print(f"Sent OTP to {email} (OTP: {otp})")
-    except Exception as e:
-        print(f"Failed to send OTP email: {e}")
-        print(f"Fallback OTP for {email}: {otp}")
+def send_otp_email_async(email, otp):
+    def send():
+        try:
+            msg = Message(
+                subject="Your OTP Code",
+                sender=app.config['MAIL_USERNAME'],
+                recipients=[email],
+                body=f"Your OTP code is: {otp}. This OTP is valid for 10 minutes."
+            )
+            mail.send(msg)
+            print(f"Sent OTP to {email}")
+        except Exception as e:
+            print(f"Failed to send OTP email: {e}")
+            print(f"Fallback OTP for {email}: {otp}")
+    threading.Thread(target=send).start()
 
 @app.route("/")
 def home():
@@ -89,7 +91,7 @@ def login():
                         "otp": generate_password_hash(otp),
                         "expiry": expiry
                     })
-                    send_otp_email(email, otp)
+                    send_otp_email_async(email, otp)
 
                     session['pending_email'] = email
                     session['pending_user_id'] = user[0]
@@ -98,15 +100,9 @@ def login():
                     return jsonify(success=True, message="OTP sent to your email.")
                 else:
                     return jsonify(success=False, message="Invalid email or password."), 401
-
             except Exception as e:
                 return jsonify(success=False, message=f"Server error: {str(e)}"), 500
-
-        if request.headers.get("Content-Type", "").startswith("application/json"):
-            return jsonify(success=False, message="Invalid JSON format."), 400
-        else:
-            return render_template("login.html")
-
+        return jsonify(success=False, message="Invalid request format."), 400
     return render_template("login.html")
 
 @app.route("/verify_otp", methods=["POST"])
@@ -153,7 +149,6 @@ def signup():
         email = request.form.get("email", "").strip()
         password = request.form.get("password", "")
         hashed_password = generate_password_hash(password)
-
         try:
             with sqlite3.connect("users.db", timeout=10) as conn:
                 cursor = conn.cursor()
@@ -167,57 +162,12 @@ def signup():
             error = "Email already registered."
         except sqlite3.OperationalError as e:
             error = f"Database error: {e}"
-
     return render_template("signup.html", error=error)
 
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect(url_for("login"))
-
-@app.route("/api/trending")
-def api_trending():
-    try:
-        resp = requests.get(
-            "https://api.themoviedb.org/3/trending/movie/week",
-            params={"language": "en-US"},
-            headers={"Authorization": f"Bearer {TMDB_READ_ACCESS_TOKEN}"}
-        )
-        resp.raise_for_status()
-        return jsonify(resp.json())
-    except Exception as e:
-        return jsonify({"error": f"TMDb API error: {str(e)}"}), 500
-
-@app.route("/api/search")
-def api_search():
-    query = request.args.get("query")
-    language = request.args.get("language", "en-US")
-    if not query:
-        return jsonify({"error": "Missing query parameter"}), 400
-    try:
-        resp = requests.get(
-            "https://api.themoviedb.org/3/search/movie",
-            params={"query": query, "language": language},
-            headers={"Authorization": f"Bearer {TMDB_READ_ACCESS_TOKEN}"}
-        )
-        resp.raise_for_status()
-        return jsonify(resp.json())
-    except Exception as e:
-        return jsonify({"error": f"TMDb API error: {str(e)}"}), 500
-
-@app.route("/testmail")
-def testmail():
-    try:
-        msg = Message(
-            "Test Email From Flask",
-            sender=app.config['MAIL_USERNAME'],
-            recipients=[app.config['MAIL_USERNAME']],
-            body="This is a test email sent from your Flask app."
-        )
-        mail.send(msg)
-        return "Test email sent!"
-    except Exception as e:
-        return f"Failed to send email: {e}"
 
 if __name__ == "__main__":
     app.debug = True
