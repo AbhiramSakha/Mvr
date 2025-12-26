@@ -10,17 +10,17 @@ from datetime import datetime, timedelta
 
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "fallback_secret_key")
+
 # ===== MAIL CONFIG =====
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
-app.config['MAIL_USERNAME'] = 'abhiramsakhaa@gmail.com'
-app.config['MAIL_PASSWORD'] = 'gorsvdqmlpwedlbp'
+app.config['MAIL_USERNAME'] = 'sakhabhiram1234@gmail.com'
+app.config['MAIL_PASSWORD'] = 'aqelcqlruyhiutip'
 app.config['MAIL_USE_TLS'] = True
 app.config['MAIL_USE_SSL'] = False
 mail = Mail(app)
 
 # ===== MONGODB =====
-# MongoDB
 MONGO_URI = os.getenv("MONGO_URI")
 mongo_client = MongoClient(MONGO_URI)
 db = mongo_client["movie_app"]
@@ -58,8 +58,9 @@ def send_otp_email_async(email, otp):
             mail.send(msg)
             print(f"✅ OTP email sent to {email}")
         except Exception as e:
-            print(f"❌ Failed to send OTP: {e}")
+            print(f"❌ Failed to send OTP to {email}: {e}")
             print(f"💡 Debug OTP: {otp}")  # Show OTP in console if email fails
+            session['otp_send_error'] = "Failed to send OTP email. Please try again later."
 
     threading.Thread(target=send).start()
 
@@ -141,7 +142,26 @@ def verify_otp():
 
         return render_template("verify_otp.html", error="Invalid OTP. Try again.")
 
-    return render_template("verify_otp.html", debug_otp=session.get('debug_otp'))
+    return render_template("verify_otp.html", debug_otp=session.get('debug_otp'), otp_send_error=session.get('otp_send_error'))
+
+@app.route("/resend_otp", methods=["POST"])
+def resend_otp():
+    if 'pending_email' not in session:
+        return jsonify(success=False, message="Session expired. Please log in again."), 400
+
+    email = session['pending_email']
+    otp = generate_otp()
+    expiry = datetime.utcnow() + timedelta(minutes=10)
+
+    otps_collection.delete_many({"email": email})
+    otps_collection.insert_one({
+        "email": email,
+        "otp": generate_password_hash(otp),
+        "expiry": expiry
+    })
+
+    send_otp_email_async(email, otp)
+    return jsonify(success=True, message="OTP resent. Check your inbox/spam.")
 
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
