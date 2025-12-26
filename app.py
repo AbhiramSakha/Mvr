@@ -1,88 +1,76 @@
-from flask import Flask, render_template, request, redirect, url_for, session, jsonify
-from werkzeug.security import generate_password_hash, check_password_hash
-from flask_mail import Mail, Message
-from pymongo import MongoClient
-import sqlite3
 import os
 import random
-import threading
+import sqlite3
+import smtplib
+from email.message import EmailMessage
 from datetime import datetime, timedelta
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session
+from werkzeug.security import generate_password_hash, check_password_hash
+from pymongo import MongoClient
+from dotenv import load_dotenv
 
-# ================= APP CONFIG =================
+# ================= LOAD ENV =================
+load_dotenv()
+
+EMAIL_USER = os.getenv("MAIL_USERNAME")
+EMAIL_PASS = os.getenv("MAIL_PASSWORD")
+
+# ================= APP =================
 app = Flask(__name__)
-app.secret_key = os.getenv("FLASK_SECRET_KEY", "super_secret_key")
+app.secret_key = os.getenv("FLASK_SECRET_KEY")
 
-# ================= MAIL CONFIG =================
-app.config.update(
-    MAIL_SERVER="smtp.gmail.com",
-    MAIL_PORT=587,
-    MAIL_USE_TLS=True,
-    MAIL_USERNAME="sakhabhiram1234@gmail.com",
-    MAIL_PASSWORD="aqelcqlruyhiutip"
-)
+# ================= DB =================
+mongo = MongoClient(os.getenv("MONGO_URI"))
+db = mongo["movie_app"]
+otp_col = db["otps"]
 
-mail = Mail(app)
-
-# ================= DATABASES =================
-# SQLite users DB
 def init_db():
     with sqlite3.connect("users.db") as conn:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT NOT NULL,
-                email TEXT UNIQUE NOT NULL,
-                password TEXT NOT NULL
+                username TEXT,
+                email TEXT UNIQUE,
+                password TEXT
             )
         """)
 init_db()
 
-# MongoDB for OTPs
-mongo = MongoClient(os.getenv("MONGO_URI"))
-db = mongo["movie_app"]
-otp_col = db["otps"]
+# ================= OTP EMAIL =================
+def send_otp_email(email, otp):
+    if not EMAIL_USER or not EMAIL_PASS:
+        raise RuntimeError("Email credentials missing")
+
+    msg = EmailMessage()
+    msg["Subject"] = "Your OTP Code"
+    msg["From"] = EMAIL_USER
+    msg["To"] = email
+    msg.set_content(f"""
+Your One-Time Password is:
+
+{otp}
+
+Valid for 5 minutes.
+Do not share it.
+""")
+
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+        server.login(EMAIL_USER, EMAIL_PASS)
+        server.send_message(msg)
 
 # ================= HELPERS =================
 def generate_otp():
     return str(random.randint(100000, 999999))
 
-def send_otp_email(email, otp):
-    def send():
-        try:
-            msg = Message(
-                subject="Your Login OTP",
-                sender=app.config["MAIL_USERNAME"],
-                recipients=[email],
-                body=f"Your OTP is: {otp}\n\nValid for 10 minutes."
-            )
-            mail.send(msg)
-            print(f"✅ OTP sent to {email}")
-        except Exception as e:
-            print(f"❌ OTP email failed: {e}")
-            print(f"DEBUG OTP: {otp}")  # console-only fallback
-
-    threading.Thread(target=send).start()
-
 # ================= ROUTES =================
 
-@app.route("/")
-def home():
-    if "user_id" not in session:
-        return redirect(url_for("login"))
-    return f"Welcome {session['username']} 🎉"
-
-# ---------- LOGIN (SEND OTP) ----------
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        if not request.is_json:
-            return jsonify(success=False, message="Invalid request"), 400
-
         data = request.get_json()
-        email = data.get("email", "").strip()
-        password = data.get("password", "")
+        email = data.get("email")
+        password = data.get("password")
 
-        # Validate user
         with sqlite3.connect("users.db") as conn:
             user = conn.execute(
                 "SELECT id, username, password FROM users WHERE email=?",
@@ -90,86 +78,70 @@ def login():
             ).fetchone()
 
         if not user or not check_password_hash(user[2], password):
-            return jsonify(success=False, message="Invalid email or password"), 401
+            return jsonify(success=False, message="Invalid credentials"), 401
 
-        # Generate OTP
         otp = generate_otp()
-        expiry = datetime.utcnow() + timedelta(minutes=10)
-
         otp_col.delete_many({"email": email})
         otp_col.insert_one({
             "email": email,
             "otp": generate_password_hash(otp),
-            "expiry": expiry
+            "expiry": datetime.utcnow() + timedelta(minutes=5)
         })
 
         send_otp_email(email, otp)
 
-        # Temp session
         session["pending_email"] = email
         session["pending_user_id"] = user[0]
         session["pending_username"] = user[1]
 
-        return jsonify(success=True, message="OTP sent successfully")
+        return jsonify(success=True, message="OTP sent")
 
     return render_template("login.html")
 
-# ---------- VERIFY OTP ----------
 @app.route("/verify_otp", methods=["POST"])
 def verify_otp():
-    email = request.form.get("email", "").strip()
-    otp_input = request.form.get("otp", "").strip()
-
-    if session.get("pending_email") != email:
-        return render_template("verify_otp.html", error="Session expired. Login again.")
+    email = request.form.get("email")
+    otp = request.form.get("otp")
 
     record = otp_col.find_one({"email": email})
-
     if not record:
-        return render_template("verify_otp.html", error="OTP not found. Login again.")
+        return render_template("verify_otp.html", error="OTP not found")
 
     if record["expiry"] < datetime.utcnow():
-        otp_col.delete_many({"email": email})
-        session.clear()
-        return render_template("verify_otp.html", error="OTP expired.")
+        return render_template("verify_otp.html", error="OTP expired")
 
-    if not check_password_hash(record["otp"], otp_input):
-        return render_template("verify_otp.html", error="Invalid OTP.")
+    if not check_password_hash(record["otp"], otp):
+        return render_template("verify_otp.html", error="Invalid OTP")
 
-    # OTP valid → Login user
     session["user_id"] = session.pop("pending_user_id")
     session["username"] = session.pop("pending_username")
-    session.pop("pending_email", None)
+    session.pop("pending_email")
 
     otp_col.delete_many({"email": email})
-    return redirect(url_for("home"))
+    return redirect("/dashboard")
 
-# ---------- SIGNUP ----------
-@app.route("/signup", methods=["GET", "POST"])
-def signup():
-    error = None
-    if request.method == "POST":
-        username = request.form["username"]
-        email = request.form["email"]
-        password = generate_password_hash(request.form["password"])
+@app.route("/resend_otp", methods=["POST"])
+def resend_otp():
+    email = session.get("pending_email")
+    if not email:
+        return jsonify(success=False), 400
 
-        try:
-            with sqlite3.connect("users.db") as conn:
-                conn.execute(
-                    "INSERT INTO users (username, email, password) VALUES (?, ?, ?)",
-                    (username, email, password)
-                )
-            return redirect(url_for("login"))
-        except sqlite3.IntegrityError:
-            error = "Email already exists"
+    otp = generate_otp()
+    otp_col.delete_many({"email": email})
+    otp_col.insert_one({
+        "email": email,
+        "otp": generate_password_hash(otp),
+        "expiry": datetime.utcnow() + timedelta(minutes=5)
+    })
 
-    return render_template("signup.html", error=error)
+    send_otp_email(email, otp)
+    return jsonify(success=True)
 
-# ---------- LOGOUT ----------
-@app.route("/logout")
-def logout():
-    session.clear()
-    return redirect(url_for("login"))
+@app.route("/dashboard")
+def dashboard():
+    if "user_id" not in session:
+        return redirect("/login")
+    return f"Welcome {session['username']} 🎉"
 
 # ================= RUN =================
 if __name__ == "__main__":
