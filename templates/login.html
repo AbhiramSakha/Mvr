@@ -6,15 +6,10 @@
   <title>Login</title>
 
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
       height: 100vh;
-      width: 100%;
       background: url("{{ url_for('static', filename='images/logi.jpg') }}") center / cover no-repeat fixed;
       font-family: 'Poppins', sans-serif;
       display: flex;
@@ -43,74 +38,50 @@
       box-shadow: 0 8px 32px rgba(0,0,0,0.3);
     }
 
-    h2 {
-      margin-bottom: 20px;
-      font-size: 28px;
-    }
+    h2 { margin-bottom: 20px; }
 
     input {
       width: 100%;
-      padding: 12px 15px;
+      padding: 12px;
       margin: 10px 0;
       border-radius: 10px;
       border: none;
       background: rgba(255,255,255,0.25);
       color: white;
-      font-size: 14px;
     }
 
-    input::placeholder {
-      color: rgba(255,255,255,0.8);
-    }
-
-    input:focus {
-      outline: none;
-      background: rgba(255,255,255,0.35);
-    }
+    input::placeholder { color: rgba(255,255,255,0.8); }
 
     button {
       width: 100%;
       padding: 12px;
-      margin-top: 10px;
       border-radius: 10px;
       border: none;
       font-weight: bold;
       color: white;
       background: linear-gradient(90deg, #00DBDE, #FC00FF);
       cursor: pointer;
-    }
-
-    button:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-
-    .error {
-      color: #ff6961;
       margin-top: 10px;
-      min-height: 22px;
     }
 
-    .success {
-      color: #00ff99;
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .error { color: #ff6961; min-height: 22px; }
+    .success { color: #00ff99; min-height: 22px; }
+
+    #otp-section { display: none; }
+
+    #resend-btn {
+      background: none;
+      border: none;
+      color: #00f7ff;
+      cursor: pointer;
       margin-top: 10px;
-      min-height: 22px;
-    }
-
-    #otp-section {
       display: none;
     }
 
-    p {
-      margin-top: 15px;
-      font-size: 14px;
-    }
-
-    a {
-      color: #00f7ff;
-      text-decoration: none;
-      font-weight: bold;
-    }
+    p { margin-top: 15px; font-size: 14px; }
+    a { color: #00f7ff; text-decoration: none; font-weight: bold; }
   </style>
 </head>
 
@@ -118,80 +89,103 @@
   <div class="login-container">
     <h2>Welcome Back 👋</h2>
 
-    <!-- IMPORTANT: form submits to verify_otp -->
-    <form id="loginForm" method="POST" action="/verify_otp">
+    <form method="POST" action="/verify_otp" id="loginForm">
 
       <!-- Email -->
       <input type="email" id="email" name="email" placeholder="Email" required />
 
-      <!-- Password (only for OTP generation) -->
+      <!-- Password -->
       <input type="password" id="password" placeholder="Password" required />
 
-      <!-- Send OTP Button -->
+      <!-- Send OTP -->
       <button type="button" id="sendOtpBtn" onclick="sendOTP()">Send OTP</button>
 
       <!-- OTP Section -->
       <div id="otp-section">
-        <input type="text" name="otp" placeholder="Enter 6-digit OTP" maxlength="6" required />
+        <input type="text" id="otp" name="otp" placeholder="Enter 6-digit OTP" maxlength="6" required />
         <button type="submit">Verify & Login</button>
       </div>
     </form>
 
-    <p id="message" class=""></p>
+    <p id="message"></p>
+    <p id="timer"></p>
+    <button id="resend-btn" onclick="resendOTP()">Resend OTP</button>
 
     <p>Don’t have an account? <a href="{{ url_for('signup') }}">Sign Up</a></p>
   </div>
 
-  <script>
-    async function sendOTP() {
-      const email = document.getElementById("email").value.trim();
-      const password = document.getElementById("password").value.trim();
-      const btn = document.getElementById("sendOtpBtn");
+<script>
+  let countdown = 30;
+  let timerInterval;
 
-      if (!email || !password) {
-        showMsg("Enter email and password first.", "error");
-        return;
-      }
+  async function sendOTP() {
+    const email = emailInput.value.trim();
+    const password = passwordInput.value.trim();
+    const btn = sendOtpBtn;
 
-      btn.disabled = true;
-      btn.innerText = "Sending OTP...";
-
-      try {
-        const res = await fetch("/login", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Accept": "application/json"
-          },
-          body: JSON.stringify({ email, password })
-        });
-
-        const data = await res.json();
-
-        if (!res.ok || !data.success) {
-          throw new Error(data.message || "Login failed");
-        }
-
-        showMsg("OTP sent to your email. Check inbox/spam.", "success");
-
-        document.getElementById("otp-section").style.display = "block";
-        btn.style.display = "none";
-
-        document.getElementById("email").readOnly = true;
-        document.getElementById("password").readOnly = true;
-
-      } catch (err) {
-        showMsg(err.message, "error");
-        btn.disabled = false;
-        btn.innerText = "Send OTP";
-      }
+    if (!email || !password) {
+      showMsg("Enter email and password.", "error");
+      return;
     }
 
-    function showMsg(msg, type) {
-      const p = document.getElementById("message");
-      p.textContent = msg;
-      p.className = type;
+    btn.disabled = true;
+    btn.innerText = "Sending OTP...";
+
+    try {
+      const res = await fetch("/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message);
+
+      showMsg("OTP sent to your email.", "success");
+
+      otpSection.style.display = "block";
+      btn.style.display = "none";
+      emailInput.readOnly = true;
+      passwordInput.readOnly = true;
+
+      startTimer();
+
+    } catch (err) {
+      showMsg(err.message || "Failed to send OTP.", "error");
+      btn.disabled = false;
+      btn.innerText = "Send OTP";
     }
-  </script>
+  }
+
+  function startTimer() {
+    resendBtn.style.display = "none";
+    countdown = 30;
+    timer.textContent = `Resend OTP in ${countdown}s`;
+
+    timerInterval = setInterval(() => {
+      countdown--;
+      timer.textContent = `Resend OTP in ${countdown}s`;
+      if (countdown <= 0) {
+        clearInterval(timerInterval);
+        timer.textContent = "";
+        resendBtn.style.display = "block";
+      }
+    }, 1000);
+  }
+
+  async function resendOTP() {
+    await fetch("/resend_otp", { method: "POST" });
+    startTimer();
+    showMsg("OTP resent.", "success");
+  }
+
+  function showMsg(msg, type) {
+    message.textContent = msg;
+    message.className = type;
+  }
+</script>
 </body>
 </html>
