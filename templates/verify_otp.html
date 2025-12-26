@@ -12,12 +12,19 @@
       justify-content: center;
       align-items: center;
       height: 100vh;
+      margin: 0;
     }
     .container {
       background: white;
       padding: 30px;
       border-radius: 10px;
-      box-shadow: 0 0 15px rgba(0,0,0,0.2);
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 400px;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
     }
     input {
       display: block;
@@ -26,6 +33,7 @@
       margin-bottom: 15px;
       border-radius: 5px;
       border: 1px solid #ccc;
+      font-size: 16px;
     }
     button {
       width: 100%;
@@ -39,15 +47,79 @@
     button:hover {
       background: #e0a800;
     }
+    .error {
+      color: red;
+      font-size: 14px;
+      margin-bottom: 15px;
+      text-align: center;
+    }
+    .success {
+      color: green;
+      font-size: 14px;
+      margin-bottom: 15px;
+      text-align: center;
+    }
+    .resend-otp {
+      text-align: center;
+      margin-top: 15px;
+    }
+    .resend-otp button {
+      background: #28a745;
+    }
+    .resend-otp button:hover {
+      background: #218838;
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <h2>Verify OTP</h2>
+    
+    <!-- Error Message if OTP not valid or session expired -->
+    {% if error %}
+      <div class="error">{{ error }}</div>
+    {% endif %}
+
+    <!-- Success Message for OTP sent -->
+    {% if otp_send_error %}
+      <div class="error">{{ otp_send_error }}</div>
+    {% endif %}
+    
     <form action="/verify_otp" method="POST">
       <input type="text" name="otp" placeholder="Enter OTP sent to your email" required />
       <button type="submit">Verify & Complete Signup</button>
     </form>
+
+    <!-- Option to resend OTP -->
+    <div class="resend-otp">
+      <p>If you didn’t receive an OTP, <a href="#" onclick="resendOtp();">click here</a> to resend.</p>
+    </div>
   </div>
+
+  <script>
+    function resendOtp() {
+      fetch('/resend_otp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: "{{ session.get('pending_email') }}"
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          alert(data.message);
+        } else {
+          alert('Failed to resend OTP. Please try again.');
+        }
+      })
+      .catch(error => {
+        console.error('Error resending OTP:', error);
+        alert('There was an error resending the OTP. Please try again.');
+      });
+    }
+  </script>
 </body>
 </html>
