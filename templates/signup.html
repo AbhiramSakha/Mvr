@@ -2,132 +2,190 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Signup</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
-  <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
   <style>
-    * {margin: 0; padding: 0; box-sizing: border-box;}
     body {
-      height: 100vh;
-      width: 100%;
-      background: url("{{ url_for('static', filename='images/movie2.jpg') }}") center center / cover no-repeat fixed;
-      position: relative;
       font-family: 'Poppins', sans-serif;
-      display: flex; justify-content: center; align-items: center;
+      background: #121212;
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
     }
-    body::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background: rgba(0,0,0,0.6);
-      z-index: 0;
+    .container {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 30px;
+      border-radius: 15px;
+      width: 320px;
+      box-shadow: 0 0 15px rgba(0,255,255,0.3);
     }
-    .signup-container {
-      position: relative;
-      z-index: 1;
-      width: 380px;
-      padding: 40px;
-      border-radius: 20px;
-      background: rgba(255, 255, 255, 0.05);
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-      backdrop-filter: blur(14px);
-      border: 1px solid rgba(255, 255, 255, 0.18);
-      animation: fadeInUp 1s ease forwards;
-      opacity: 0;
-      transform: translateY(30px);
-      color: #fff;
+    input {
+      width: 100%;
+      padding: 12px;
+      margin: 12px 0;
+      border-radius: 8px;
+      border: none;
+      background: rgba(255, 255, 255, 0.15);
+      color: white;
+      font-size: 14px;
     }
-    @keyframes fadeInUp {
-      to { opacity: 1; transform: translateY(0); }
+    input::placeholder {
+      color: #ccc;
     }
-    .signup-container h2 { text-align: center; font-size: 26px; margin-bottom: 25px; font-weight: 600; }
-    .input-group { position: relative; margin-bottom: 22px; }
-    .input-group i {
-      position: absolute; top: 50%; left: 15px; transform: translateY(-50%);
-      color: rgba(255, 255, 255, 0.8);
+    button {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      background: linear-gradient(90deg, #00DBDE, #FC00FF);
+      color: black;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 16px;
     }
-    .input-group input {
-      width: 100%; padding: 14px 14px 14px 45px;
-      border-radius: 10px; border: none; outline: none;
-      font-size: 15px; color: #fff; background: rgba(255, 255, 255, 0.1);
-      transition: 0.3s;
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
     }
-    .input-group input::placeholder { color: rgba(255,255,255,0.7); }
-    .input-group input:focus { background: rgba(255,255,255,0.2); box-shadow: 0 0 10px #00ffe7, 0 0 20px #00ffe7; }
-    .signup-container button {
-      width: 100%; padding: 14px; border: none; border-radius: 10px;
-      background: linear-gradient(135deg, #00ffe7, #0079ff);
-      color: #000; font-size: 16px; font-weight: 600; cursor: pointer; transition: 0.3s ease;
+    #otp-section {
+      display: none;
+      margin-top: 10px;
     }
-    .signup-container button:hover { transform: scale(1.03); box-shadow: 0 8px 20px rgba(0, 255, 231, 0.4); }
-    .signup-container p { margin-top: 20px; text-align: center; font-size: 14px; color: #eee; }
-    .signup-container a { color: #00ffe7; text-decoration: none; font-weight: bold; }
-    .signup-container a:hover { text-decoration: underline; }
-    .error { color: #ff6961; margin-top: 10px; }
-    .success { color: #00ff99; margin-top: 10px; }
+    .message {
+      margin-top: 12px;
+      min-height: 20px;
+      font-weight: bold;
+    }
+    .message.error {
+      color: #ff6961;
+    }
+    .message.success {
+      color: #00ff99;
+    }
+    p {
+      text-align: center;
+      margin-top: 18px;
+      font-size: 14px;
+      color: #aaa;
+    }
+    a {
+      color: #00DBDE;
+      text-decoration: none;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
-  <div class="signup-container">
-    <h2>Create Account 🚀</h2>
 
-    <div class="input-group">
-      <i class="fas fa-user"></i>
-      <input type="text" id="username" placeholder="Enter your username" required />
+<div class="container">
+  <h2>Signup & Send OTP</h2>
+  <form id="signupForm">
+    <input type="text" id="username" placeholder="Username" required />
+    <input type="email" id="email" placeholder="Email" required />
+    <input type="password" id="password" placeholder="Password" required />
+
+    <button type="button" id="signupBtn">Signup & Send OTP</button>
+
+    <div id="otp-section">
+      <input type="text" id="otp" placeholder="Enter 6-digit OTP" maxlength="6" required />
+      <button type="button" id="verifyOtpBtn">Verify OTP</button>
     </div>
-    <div class="input-group">
-      <i class="fas fa-envelope"></i>
-      <input type="email" id="email" placeholder="Enter your email" required />
-    </div>
-    <div class="input-group">
-      <i class="fas fa-lock"></i>
-      <input type="password" id="password" placeholder="Enter your password" required />
-    </div>
 
-    <button onclick="signupUser()">Sign Up</button>
+    <div id="message" class="message"></div>
+  </form>
 
-    <p id="message"></p>
-    <p>Already have an account? <a href="{{ url_for('login') }}">Login</a></p>
-  </div>
+  <p>Already have an account? <a href="/login">Login</a></p>
+</div>
 
-  <script>
-    async function signupUser() {
-      const username = document.getElementById("username").value.trim();
-      const email = document.getElementById("email").value.trim();
-      const password = document.getElementById("password").value.trim();
-      const msg = document.getElementById("message");
+<script>
+  const signupBtn = document.getElementById('signupBtn');
+  const verifyOtpBtn = document.getElementById('verifyOtpBtn');
+  const messageEl = document.getElementById('message');
+  const otpSection = document.getElementById('otp-section');
 
-      if (!username || !email || !password) {
-        msg.textContent = "Please fill all fields.";
-        msg.className = "error";
-        return;
-      }
+  async function showMessage(msg, type='error') {
+    messageEl.textContent = msg;
+    messageEl.className = 'message ' + type;
+  }
 
-      try {
-        const res = await fetch("/signup", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username, email, password })
-        });
+  signupBtn.addEventListener('click', async () => {
+    const username = document.getElementById('username').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value.trim();
 
-        const data = await res.json();
-
-        msg.textContent = data.message;
-        msg.className = data.success ? "success" : "error";
-
-        if (data.success) {
-          // Optionally, redirect to login after 2s
-          setTimeout(() => { window.location.href = "/login"; }, 2000);
-        }
-
-      } catch (err) {
-        msg.textContent = "Server error. Try again.";
-        msg.className = "error";
-      }
+    if (!username || !email || !password) {
+      showMessage('All fields are required.');
+      return;
     }
-  </script>
+
+    signupBtn.disabled = true;
+    signupBtn.textContent = 'Sending OTP...';
+
+    try {
+      const res = await fetch('/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, email, password })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.message || 'Signup failed');
+
+      showMessage('OTP sent to your email!', 'success');
+      otpSection.style.display = 'block';
+      signupBtn.style.display = 'none';
+
+      // Lock inputs
+      document.getElementById('username').readOnly = true;
+      document.getElementById('email').readOnly = true;
+      document.getElementById('password').readOnly = true;
+
+    } catch (err) {
+      showMessage(err.message || 'An error occurred.');
+      signupBtn.disabled = false;
+      signupBtn.textContent = 'Signup & Send OTP';
+    }
+  });
+
+  verifyOtpBtn.addEventListener('click', async () => {
+    const email = document.getElementById('email').value.trim();
+    const otp = document.getElementById('otp').value.trim();
+
+    if (otp.length !== 6) {
+      showMessage('Please enter a valid 6-digit OTP.');
+      return;
+    }
+
+    verifyOtpBtn.disabled = true;
+    verifyOtpBtn.textContent = 'Verifying...';
+
+    try {
+      const res = await fetch('/verify_otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, otp })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.message || 'OTP verification failed');
+
+      showMessage('OTP verified! You are now logged in.', 'success');
+
+      // Redirect or clear form as needed
+      setTimeout(() => window.location.href = '/dashboard', 1500);
+
+    } catch (err) {
+      showMessage(err.message || 'Verification error.');
+      verifyOtpBtn.disabled = false;
+      verifyOtpBtn.textContent = 'Verify OTP';
+    }
+  });
+</script>
+
 </body>
 </html>
