@@ -9,31 +9,22 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
   <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
+    * {margin: 0; padding: 0; box-sizing: border-box;}
     body {
       height: 100vh;
       width: 100%;
       background: url("{{ url_for('static', filename='images/movie2.jpg') }}") center center / cover no-repeat fixed;
       position: relative;
       font-family: 'Poppins', sans-serif;
-      display: flex;
-      justify-content: center;
-      align-items: center;
+      display: flex; justify-content: center; align-items: center;
     }
-
     body::before {
       content: "";
       position: absolute;
       inset: 0;
-      background: rgba(0,0,0,0.6); /* subtle dark overlay to improve readability */
+      background: rgba(0,0,0,0.6);
       z-index: 0;
     }
-
     .signup-container {
       position: relative;
       z-index: 1;
@@ -49,110 +40,94 @@
       transform: translateY(30px);
       color: #fff;
     }
-
     @keyframes fadeInUp {
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
+      to { opacity: 1; transform: translateY(0); }
     }
-
-    .signup-container h2 {
-      text-align: center;
-      font-size: 26px;
-      margin-bottom: 25px;
-      font-weight: 600;
-    }
-
-    .input-group {
-      position: relative;
-      margin-bottom: 22px;
-    }
-
+    .signup-container h2 { text-align: center; font-size: 26px; margin-bottom: 25px; font-weight: 600; }
+    .input-group { position: relative; margin-bottom: 22px; }
     .input-group i {
-      position: absolute;
-      top: 50%;
-      left: 15px;
-      transform: translateY(-50%);
+      position: absolute; top: 50%; left: 15px; transform: translateY(-50%);
       color: rgba(255, 255, 255, 0.8);
     }
-
     .input-group input {
-      width: 100%;
-      padding: 14px 14px 14px 45px;
-      border-radius: 10px;
-      border: none;
-      outline: none;
-      font-size: 15px;
-      color: #fff;
-      background: rgba(255, 255, 255, 0.1);
+      width: 100%; padding: 14px 14px 14px 45px;
+      border-radius: 10px; border: none; outline: none;
+      font-size: 15px; color: #fff; background: rgba(255, 255, 255, 0.1);
       transition: 0.3s;
     }
-
-    .input-group input::placeholder {
-      color: rgba(255,255,255,0.7);
-    }
-
-    .input-group input:focus {
-      background: rgba(255,255,255,0.2);
-      box-shadow: 0 0 10px #00ffe7, 0 0 20px #00ffe7;
-    }
-
+    .input-group input::placeholder { color: rgba(255,255,255,0.7); }
+    .input-group input:focus { background: rgba(255,255,255,0.2); box-shadow: 0 0 10px #00ffe7, 0 0 20px #00ffe7; }
     .signup-container button {
-      width: 100%;
-      padding: 14px;
-      border: none;
-      border-radius: 10px;
+      width: 100%; padding: 14px; border: none; border-radius: 10px;
       background: linear-gradient(135deg, #00ffe7, #0079ff);
-      color: #000;
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: 0.3s ease;
+      color: #000; font-size: 16px; font-weight: 600; cursor: pointer; transition: 0.3s ease;
     }
-
-    .signup-container button:hover {
-      transform: scale(1.03);
-      box-shadow: 0 8px 20px rgba(0, 255, 231, 0.4);
-    }
-
-    .signup-container p {
-      margin-top: 20px;
-      text-align: center;
-      font-size: 14px;
-      color: #eee;
-    }
-
-    .signup-container a {
-      color: #00ffe7;
-      text-decoration: none;
-      font-weight: bold;
-    }
-
-    .signup-container a:hover {
-      text-decoration: underline;
-    }
+    .signup-container button:hover { transform: scale(1.03); box-shadow: 0 8px 20px rgba(0, 255, 231, 0.4); }
+    .signup-container p { margin-top: 20px; text-align: center; font-size: 14px; color: #eee; }
+    .signup-container a { color: #00ffe7; text-decoration: none; font-weight: bold; }
+    .signup-container a:hover { text-decoration: underline; }
+    .error { color: #ff6961; margin-top: 10px; }
+    .success { color: #00ff99; margin-top: 10px; }
   </style>
 </head>
 <body>
   <div class="signup-container">
     <h2>Create Account 🚀</h2>
-    <form method="POST">
-      <div class="input-group">
-        <i class="fas fa-user"></i>
-        <input type="text" name="username" placeholder="Enter your username" required />
-      </div>
-      <div class="input-group">
-        <i class="fas fa-envelope"></i>
-        <input type="email" name="email" placeholder="Enter your email" required />
-      </div>
-      <div class="input-group">
-        <i class="fas fa-lock"></i>
-        <input type="password" name="password" placeholder="Enter your password" required />
-      </div>
-      <button type="submit">Sign Up</button>
-    </form>
+
+    <div class="input-group">
+      <i class="fas fa-user"></i>
+      <input type="text" id="username" placeholder="Enter your username" required />
+    </div>
+    <div class="input-group">
+      <i class="fas fa-envelope"></i>
+      <input type="email" id="email" placeholder="Enter your email" required />
+    </div>
+    <div class="input-group">
+      <i class="fas fa-lock"></i>
+      <input type="password" id="password" placeholder="Enter your password" required />
+    </div>
+
+    <button onclick="signupUser()">Sign Up</button>
+
+    <p id="message"></p>
     <p>Already have an account? <a href="{{ url_for('login') }}">Login</a></p>
   </div>
+
+  <script>
+    async function signupUser() {
+      const username = document.getElementById("username").value.trim();
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value.trim();
+      const msg = document.getElementById("message");
+
+      if (!username || !email || !password) {
+        msg.textContent = "Please fill all fields.";
+        msg.className = "error";
+        return;
+      }
+
+      try {
+        const res = await fetch("/signup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, email, password })
+        });
+
+        const data = await res.json();
+
+        msg.textContent = data.message;
+        msg.className = data.success ? "success" : "error";
+
+        if (data.success) {
+          // Optionally, redirect to login after 2s
+          setTimeout(() => { window.location.href = "/login"; }, 2000);
+        }
+
+      } catch (err) {
+        msg.textContent = "Server error. Try again.";
+        msg.className = "error";
+      }
+    }
+  </script>
 </body>
 </html>
