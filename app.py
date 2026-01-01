@@ -10,10 +10,13 @@ load_dotenv()
 
 app = Flask(__name__)
 
-# ================= CONFIG =================
-app.secret_key = os.getenv("SECRET_KEY")
+# ================= SECRET KEY (FIXED NAME) =================
+app.secret_key = os.getenv("FLASK_SECRET_KEY")
 
-# TMDb keys from environment (Render compatible)
+if not app.secret_key:
+    raise RuntimeError("FLASK_SECRET_KEY is not set in environment variables")
+
+# ================= TMDb CONFIG =================
 TMDB_API_KEY = os.getenv("TMDB_API_KEY")
 TMDB_READ_ACCESS_TOKEN = os.getenv("TMDB_READ_ACCESS_TOKEN")
 
@@ -79,7 +82,7 @@ def signup():
 
     return render_template("signup.html", error=error)
 
-# ================= LOGIN (JSON ONLY) =================
+# ================= LOGIN (JSON SAFE) =================
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -88,7 +91,7 @@ def login():
             return jsonify(success=False, message="Invalid request type"), 400
 
         try:
-            data = request.get_json()
+            data = request.get_json(force=True)
             email = data.get("email", "").strip()
             password = data.get("password", "")
 
@@ -101,15 +104,21 @@ def login():
             user = cursor.fetchone()
             conn.close()
 
-            if user and check_password_hash(user[3], password):
-                session["user_id"] = user[0]
-                session["username"] = user[1]
-                return jsonify(success=True)
+            if not user:
+                return jsonify(success=False, message="User not found"), 401
 
-            return jsonify(success=False, message="Invalid email or password"), 401
+            if not check_password_hash(user[3], password):
+                return jsonify(success=False, message="Invalid password"), 401
+
+            # ✅ SAFE SESSION SET
+            session.clear()
+            session["user_id"] = int(user[0])
+            session["username"] = user[1]
+
+            return jsonify(success=True)
 
         except Exception as e:
-            print("LOGIN ERROR:", e)
+            print("🔥 LOGIN ERROR:", e)
             return jsonify(success=False, message="Server error"), 500
 
     return render_template("login.html")
@@ -150,7 +159,7 @@ def api_search():
             params={
                 "query": query,
                 "language": language,
-                "api_key": TMDB_API_KEY   # optional but safe
+                "api_key": TMDB_API_KEY
             },
             headers=TMDB_HEADERS
         )
