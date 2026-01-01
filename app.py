@@ -4,7 +4,6 @@ from dotenv import load_dotenv
 import sqlite3
 import requests
 import os
-from flask_pymongo import PyMongo
 
 # ================= LOAD ENV =================
 load_dotenv()
@@ -13,11 +12,7 @@ app = Flask(__name__)
 
 # ================= CONFIG =================
 app.secret_key = os.getenv("SECRET_KEY")
-app.config["MONGO_URI"] = os.getenv("MONGO_URI")
 
-mongo = PyMongo(app)
-
-TMDB_API_KEY = os.getenv("TMDB_API_KEY")
 TMDB_READ_ACCESS_TOKEN = os.getenv("TMDB_READ_ACCESS_TOKEN")
 
 TMDB_HEADERS = {
@@ -42,7 +37,7 @@ def init_db():
 
 init_db()
 
-# ================= HOME =================
+# ================= HOME / DASHBOARD =================
 @app.route("/")
 def home():
     if "user_id" not in session:
@@ -57,7 +52,7 @@ def signup():
     if request.method == "POST":
         username = request.form.get("username", "").strip()
         email = request.form.get("email", "").strip()
-        password = request.form.get("password", "")
+        password = request.form.get("password", "").strip()
 
         if not username or not email or not password:
             return render_template("signup.html", error="All fields are required")
@@ -78,16 +73,26 @@ def signup():
             return redirect(url_for("login"))
 
         except sqlite3.IntegrityError:
-            error = "Email already registered"
+            error = "Email already registered."
 
     return render_template("signup.html", error=error)
 
-# ================= LOGIN =================
+# ================= LOGIN (FIXED PERFECTLY) =================
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        email = request.form.get("email", "").strip()
-        password = request.form.get("password", "")
+
+        # ✅ Accept JSON (fetch) OR form submit
+        if request.is_json:
+            data = request.get_json()
+            email = data.get("email", "").strip()
+            password = data.get("password", "")
+        else:
+            email = request.form.get("email", "").strip()
+            password = request.form.get("password", "")
+
+        if not email or not password:
+            return jsonify(success=False, message="Email and password required")
 
         conn = sqlite3.connect("users.db")
         cursor = conn.cursor()
@@ -98,9 +103,9 @@ def login():
         if user and check_password_hash(user[3], password):
             session["user_id"] = user[0]
             session["username"] = user[1]
-            return redirect(url_for("home"))
+            return jsonify(success=True)
 
-        return render_template("login.html", error="Invalid email or password")
+        return jsonify(success=False, message="Invalid email or password")
 
     return render_template("login.html")
 
