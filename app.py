@@ -13,6 +13,8 @@ app = Flask(__name__)
 # ================= CONFIG =================
 app.secret_key = os.getenv("SECRET_KEY")
 
+# TMDb keys from environment (Render compatible)
+TMDB_API_KEY = os.getenv("TMDB_API_KEY")
 TMDB_READ_ACCESS_TOKEN = os.getenv("TMDB_READ_ACCESS_TOKEN")
 
 TMDB_HEADERS = {
@@ -77,35 +79,38 @@ def signup():
 
     return render_template("signup.html", error=error)
 
-# ================= LOGIN (FIXED PERFECTLY) =================
+# ================= LOGIN (JSON ONLY) =================
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
 
-        # ✅ Accept JSON (fetch) OR form submit
-        if request.is_json:
+        if not request.is_json:
+            return jsonify(success=False, message="Invalid request type"), 400
+
+        try:
             data = request.get_json()
             email = data.get("email", "").strip()
             password = data.get("password", "")
-        else:
-            email = request.form.get("email", "").strip()
-            password = request.form.get("password", "")
 
-        if not email or not password:
-            return jsonify(success=False, message="Email and password required")
+            if not email or not password:
+                return jsonify(success=False, message="Email and password required"), 400
 
-        conn = sqlite3.connect("users.db")
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
-        user = cursor.fetchone()
-        conn.close()
+            conn = sqlite3.connect("users.db")
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
+            user = cursor.fetchone()
+            conn.close()
 
-        if user and check_password_hash(user[3], password):
-            session["user_id"] = user[0]
-            session["username"] = user[1]
-            return jsonify(success=True)
+            if user and check_password_hash(user[3], password):
+                session["user_id"] = user[0]
+                session["username"] = user[1]
+                return jsonify(success=True)
 
-        return jsonify(success=False, message="Invalid email or password")
+            return jsonify(success=False, message="Invalid email or password"), 401
+
+        except Exception as e:
+            print("LOGIN ERROR:", e)
+            return jsonify(success=False, message="Server error"), 500
 
     return render_template("login.html")
 
@@ -127,7 +132,9 @@ def api_trending():
         resp.raise_for_status()
         return jsonify(resp.json())
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print("TMDB TRENDING ERROR:", e)
+        return jsonify({"error": "Failed to fetch trending movies"}), 500
+
 
 @app.route("/api/search")
 def api_search():
@@ -140,13 +147,18 @@ def api_search():
     try:
         resp = requests.get(
             "https://api.themoviedb.org/3/search/movie",
-            params={"query": query, "language": language},
+            params={
+                "query": query,
+                "language": language,
+                "api_key": TMDB_API_KEY   # optional but safe
+            },
             headers=TMDB_HEADERS
         )
         resp.raise_for_status()
         return jsonify(resp.json())
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print("TMDB SEARCH ERROR:", e)
+        return jsonify({"error": "Failed to search movies"}), 500
 
 # ================= RUN =================
 if __name__ == "__main__":
