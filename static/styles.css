@@ -2,88 +2,69 @@
 body {
     background-image: url('/static/images/movie2.jpg'); 
     background-size: cover;
-    background-attachment: fixed;
     background-color: #000;
-    font-family: 'Poppins', sans-serif;
+    font-family: Arial, sans-serif;
     color: rgb(243, 239, 239);
-    margin: 0;
-    padding: 0;
 }
 
 /* Navbar */
 .navbar {
-    display: flex;  
+    display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 15px 30px;
-    background-color: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(4px);
-    box-shadow: 0 4px 15px rgba(255, 0, 0, 0.4);
-    position: sticky;
-    top: 0;
-    z-index: 1000;
+    padding: 15px 20px;
+    background-color: #222;
 }
 
 .navbar h2 {
     margin: 0;
-    font-weight: 600;
-    color: #fff;
-    letter-spacing: 1px;
 }
 
 .logout-btn {
     text-decoration: none;
     color: white;
-    background: linear-gradient(45deg, #ff0000, #c70000);
+    background-color: red;
     padding: 8px 15px;
-    border-radius: 8px;
-    transition: background 0.3s ease;
+    border-radius: 5px;
 }
 
 .logout-btn:hover {
-    background: linear-gradient(45deg, #c70000, #800000);
+    background-color: darkred;
 }
 
 /* Search Bar */
 .search-container {
-    margin: 30px auto;
+    margin: 20px auto;
     display: flex;
     justify-content: center;
     gap: 10px;
-    flex-wrap: wrap;
 }
 
 .search-container input {
     width: 300px;
-    padding: 12px;
-    border-radius: 8px;
-    border: 1px solid #ccc;
-    outline: none;
-    background: rgba(255,255,255,0.1);
-    color: #fff;
+    padding: 10px;
+    border-radius: 5px;
+    border: none;
 }
 
 .search-btn {
-    background: linear-gradient(45deg, #ff0000, #c70000);
+    background-color: red;
     color: white;
     border: none;
-    padding: 12px 20px;
-    border-radius: 8px;
+    padding: 10px 15px;
     cursor: pointer;
-    transition: background 0.3s ease;
 }
 
 .search-btn:hover {
-    background: linear-gradient(45deg, #c70000, #800000);
+    background-color: darkred;
 }
 
-/* Search Results */
+/* Search Results (Horizontally Aligned) */
 .search-results {
-    margin: 30px auto;
+    margin: 20px auto;
     text-align: center;
 }
 
-/* Keep animated movie track unchanged, just modernize movie card */
 #movie-results {
     display: flex;
     overflow-x: auto;
@@ -96,72 +77,39 @@ body {
 #movie-results::-webkit-scrollbar {
     height: 8px;
 }
+
 #movie-results::-webkit-scrollbar-thumb {
     background: red;
     border-radius: 4px;
 }
 
 .movie {
-    width: 220px;
+    width: 200px;
+    text-align: center;
     flex-shrink: 0;
-    background: rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(4px);
-    padding: 10px;
-    border-radius: 12px;
-    box-shadow: 0 4px 15px rgba(255, 0, 0, 0.4);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    position: relative;
-}
-
-.movie:hover {
-    transform: scale(1.05);
-    box-shadow: 0 8px 20px rgba(255, 0, 0, 0.6);
 }
 
 .movie img {
     width: 100%;
-    border-radius: 10px;
+    border-radius: 8px;
 }
 
 .movie p {
-    margin: 8px 0;
+    margin: 5px 0;
     font-size: 14px;
 }
 
-/* Trailer and Full Movie Box */
-.movie-buttons {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-top: 10px;
-}
-
-.trailer-box {
-    background: rgba(255, 0, 0, 0.3);
-    padding: 8px;
-    border-radius: 6px;
-    text-align: center;
-}
-
-.full-movie-box {
-    background: rgba(0, 0, 255, 0.3);
-    padding: 8px;
-    border-radius: 6px;
-    text-align: center;
-}
-
-.watch-btn {
-    background: linear-gradient(45deg, #ff0000, #c70000);
+.movie button {
+    background-color: red;
     color: white;
-    padding: 6px 12px;
     border: none;
+    padding: 5px 10px;
     cursor: pointer;
-    border-radius: 6px;
-    transition: background 0.3s ease;
+    border-radius: 5px;
 }
 
-.watch-btn:hover {
-    background: linear-gradient(45deg, #c70000, #800000);
+.movie button:hover {
+    background-color: darkred;
 }
 
  /* Advertisement Scrolling */
@@ -190,7 +138,7 @@ body {
     0% { transform: translateX(-100%); }
     100% { transform: translateX(100%); }
 }
-//* Search Bar */
+/* Search Bar */
 .search-container {
     text-align: center;
     margin: 20px 0;
